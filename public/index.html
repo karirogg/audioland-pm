@@ -3,900 +3,522 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Audioland - Verkefnastjórnun</title>
+  <title>Bessi - Verkefnastjórnun</title>
+  <link rel="icon" type="image/png" href="favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-dark: #333333;
-      --bg-card: #3d3d3d;
-      --bg-card-hover: #474747;
-      --border: #4a4a4a;
-      --text: #ffffff;
-      --text-dim: #aaaaaa;
-      --accent: #ED1C24;
-      --accent-dim: #c91920;
+      --bg-light: #ffffff;
+      --bg-card: #f8f8f8;
+      --bg-card-hover: #f0f0f0;
+      --border: #e0e0e0;
+      --text: #1a1a1a;
+      --text-dim: #666666;
+      --accent: #f5a623;
+      --accent-dim: #d4900f;
+      --blue: #5bb4e5;
       --success: #22c55e;
       --warning: #eab308;
-    }
-
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    body {
-      font-family: 'Inter', sans-serif;
-      background: var(--bg-dark);
-      color: var(--text);
-      min-height: 100vh;
-    }
-
-    header {
-      background: #2a2a2a;
-      border-bottom: 1px solid var(--border);
-      padding: 1rem 2rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-    }
-
-    .logo img {
-      height: 32px;
-    }
-
-    .logo-text {
-      font-size: 1.4rem;
-      font-weight: 700;
-      color: var(--accent);
-    }
-
-    .logo-subtitle {
-      font-size: 0.85rem;
-      color: var(--text-dim);
-      margin-left: 0.5rem;
-    }
-
-    .header-actions {
-      display: flex;
-      gap: 1rem;
-      align-items: center;
-    }
-
-    button {
-      font-family: inherit;
-      cursor: pointer;
-      transition: all 0.15s ease;
-    }
-
-    .btn {
-      padding: 0.6rem 1.2rem;
-      border-radius: 6px;
-      font-weight: 500;
-      font-size: 0.9rem;
-      border: none;
-    }
-
-    .btn-primary {
-      background: var(--accent);
-      color: white;
-    }
-
-    .btn-primary:hover {
-      background: var(--accent-dim);
-    }
-
-    .btn-secondary {
-      background: var(--bg-card);
-      color: var(--text);
-      border: 1px solid var(--border);
-    }
-
-    .btn-secondary:hover {
-      background: var(--bg-card-hover);
-    }
-
-    .btn-danger {
-      background: transparent;
-      color: var(--accent);
-      border: 1px solid var(--accent);
-    }
-
-    .btn-danger:hover {
-      background: var(--accent);
-      color: white;
-    }
-
-    .btn-small {
-      padding: 0.4rem 0.8rem;
-      font-size: 0.8rem;
-    }
-
-    .container {
-      max-width: 1600px;
-      margin: 0 auto;
-      padding: 2rem;
-    }
-
-    .filters {
-      display: flex;
-      gap: 1rem;
-      margin-bottom: 2rem;
-      flex-wrap: wrap;
-    }
-
-    .filter-btn {
-      padding: 0.5rem 1rem;
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      color: var(--text-dim);
-      font-size: 0.85rem;
-    }
-
-    .filter-btn.active {
-      background: var(--accent);
-      border-color: var(--accent);
-      color: white;
-    }
-
-    .verkefni-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
-      gap: 1.5rem;
-    }
-
-    .verkefni-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 1.5rem;
-      transition: all 0.2s ease;
-    }
-
-    .verkefni-card:hover {
-      border-color: var(--accent);
-    }
-
-    .verkefni-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 1rem;
-    }
-
-    .verkefni-nafn {
-      font-size: 1.2rem;
-      font-weight: 600;
-      color: var(--text);
-    }
-
-    .verkefni-stada {
-      padding: 0.25rem 0.75rem;
-      border-radius: 12px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
-    }
-
-    .stada-bidur { background: var(--warning); color: #000; }
-    .stada-vinnslu { background: var(--accent); color: #fff; }
-    .stada-lokid { background: var(--success); color: #fff; }
-
-    .verkefni-meta {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.5rem 1rem;
-      margin-bottom: 1rem;
-      font-size: 0.85rem;
-    }
-
-    .meta-item {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .meta-label {
-      color: var(--text-dim);
-      font-size: 0.75rem;
-      margin-bottom: 0.15rem;
-    }
-
-    .meta-value {
-      color: var(--text);
-    }
-
-    .verkefni-handrit {
-      background: var(--bg-dark);
-      border-radius: 8px;
-      padding: 1rem;
-      margin-bottom: 1rem;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.9rem;
-      line-height: 1.7;
-      max-height: 200px;
-      overflow-y: auto;
-      white-space: pre-wrap;
-      border-left: 3px solid var(--accent);
-    }
-
-    .verkefni-actions {
-      display: flex;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-    }
-
-    .verkefni-actions .btn {
-      flex: 1;
-      min-width: 90px;
-    }
-
-    /* Booth controls í card */
-    .booth-controls {
-      display: flex;
-      gap: 0.5rem;
-      align-items: center;
-      margin-top: 0.5rem;
-      padding-top: 0.5rem;
-      border-top: 1px solid var(--border);
-    }
-
-    .booth-controls select,
-    .booth-controls input[type="number"] {
-      padding: 0.4rem;
-      background: var(--bg-dark);
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      color: var(--text);
-      font-size: 0.8rem;
-    }
-
-    .booth-controls label {
-      font-size: 0.75rem;
-      color: var(--text-dim);
-      display: flex;
-      align-items: center;
-      gap: 0.3rem;
-    }
-
-    /* Modal */
-    .modal-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.85);
-      z-index: 100;
-      justify-content: center;
-      align-items: flex-start;
-      overflow-y: auto;
-      padding: 2rem;
-    }
-
-    .modal-overlay.active {
-      display: flex;
-    }
-
-    .modal {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      width: 100%;
-      max-width: 750px;
-      padding: 2rem;
-      margin: auto;
-    }
-
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 1.5rem;
-      padding-bottom: 1rem;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .modal-title {
-      font-size: 1.3rem;
-      font-weight: 600;
-    }
-
-    .modal-close {
-      background: none;
-      border: none;
-      color: var(--text-dim);
-      font-size: 1.8rem;
-      cursor: pointer;
-      line-height: 1;
-    }
-
-    .modal-close:hover {
-      color: var(--text);
-    }
-
-    .form-section {
-      margin-bottom: 1.5rem;
-    }
-
-    .form-section-title {
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: var(--accent);
-      margin-bottom: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    .form-group {
-      margin-bottom: 1rem;
-    }
-
-    .form-group label {
-      display: block;
-      margin-bottom: 0.4rem;
-      font-size: 0.85rem;
-      color: var(--text-dim);
-    }
-
-    .form-group input,
-    .form-group select,
-    .form-group textarea {
-      width: 100%;
-      padding: 0.7rem;
-      background: var(--bg-dark);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      color: var(--text);
-      font-family: inherit;
-      font-size: 0.95rem;
-    }
-
-    .form-group textarea {
-      min-height: 180px;
-      resize: vertical;
-      font-family: 'JetBrains Mono', monospace;
-      line-height: 1.6;
-    }
-
-    .form-group input:focus,
-    .form-group select:focus,
-    .form-group textarea:focus {
-      outline: none;
-      border-color: var(--accent);
-    }
-
-    .form-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1rem;
-    }
-
-    .form-row-3 {
-      display: grid;
-      grid-template-columns: 2fr 1fr;
-      gap: 1rem;
-    }
-
-    .input-with-button {
-      display: flex;
-      gap: 0.5rem;
-    }
-
-    .input-with-button input {
-      flex: 1;
-    }
-
-    .input-with-button .btn {
-      white-space: nowrap;
-    }
-
-    .form-actions {
-      display: flex;
-      gap: 1rem;
-      margin-top: 2rem;
-      padding-top: 1.5rem;
-      border-top: 1px solid var(--border);
-    }
-
-    .form-actions .btn {
-      flex: 1;
-    }
-
-    .booth-status {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-size: 0.85rem;
-      color: var(--text-dim);
-    }
-
-    .booth-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #ef4444;
-    }
-
-    .booth-dot.connected {
-      background: var(--success);
-    }
-
-    .empty-state {
-      text-align: center;
-      padding: 4rem 2rem;
-      color: var(--text-dim);
-    }
-
-    .empty-state h2 {
-      font-size: 1.3rem;
-      margin-bottom: 0.5rem;
-      color: var(--text);
-    }
-
-    /* Athugasemdir highlight */
-    .verkefni-athugasemdir {
-      background: rgba(237, 28, 36, 0.1);
-      border: 1px solid rgba(237, 28, 36, 0.3);
-      border-radius: 6px;
-      padding: 0.75rem;
-      margin-bottom: 1rem;
-      font-size: 0.85rem;
-      color: var(--text);
-    }
-
-    .verkefni-athugasemdir::before {
-      content: "📝 ";
-    }
+      --danger: #ef4444;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg-light); color: var(--text); min-height: 100vh; }
+    
+    header { background: #fff; border-bottom: 1px solid var(--border); padding: 0.75rem 2rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .logo { display: flex; align-items: center; gap: 0.5rem; }
+    .logo img { height: 36px; }
+    .header-center { flex: 1; max-width: 500px; margin: 0 2rem; }
+    .search-box { position: relative; width: 100%; }
+    .search-box input { width: 100%; padding: 0.6rem 1rem 0.6rem 2.5rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 0.9rem; }
+    .search-box input:focus { outline: none; border-color: var(--accent); }
+    .search-box::before { content: '🔍'; position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); font-size: 0.9rem; opacity: 0.5; }
+    .header-actions { display: flex; gap: 0.75rem; align-items: center; }
+    
+    .btn { padding: 0.6rem 1.2rem; border: none; border-radius: 8px; font-size: 0.9rem; font-weight: 500; cursor: pointer; transition: all 0.15s ease; display: flex; align-items: center; gap: 0.5rem; }
+    .btn-primary { background: var(--accent); color: #000; }
+    .btn-primary:hover { background: var(--accent-dim); }
+    .btn-secondary { background: var(--bg-card); color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary:hover { background: var(--bg-card-hover); }
+    .btn-ghost { background: transparent; color: var(--text-dim); }
+    .btn-ghost:hover { color: var(--text); background: var(--bg-card); }
+    
+    .container { max-width: 1400px; margin: 0 auto; padding: 2rem; }
+    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+    .page-title { font-size: 1.75rem; font-weight: 700; }
+    
+    .filters { display: flex; gap: 0.5rem; margin-bottom: 2rem; }
+    .filter-btn { padding: 0.5rem 1rem; background: transparent; border: none; color: var(--text-dim); font-size: 0.9rem; cursor: pointer; border-radius: 20px; transition: all 0.15s; }
+    .filter-btn:hover { color: var(--text); background: var(--bg-card); }
+    .filter-btn.active { background: var(--accent); color: #000; }
+    
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; }
+    
+    .card { background: var(--bg-card); border-radius: 12px; overflow: hidden; transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; border: 1px solid var(--border); }
+    .card:hover { transform: translateY(-4px); box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1); }
+    .card-image { width: 100%; aspect-ratio: 16/9; background: linear-gradient(135deg, #e8e8e8 0%, #d0d0d0 100%); display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+    .card-image img { width: 100%; height: 100%; object-fit: cover; }
+    .card-image .placeholder { width: 48px; height: 48px; opacity: 0.3; }
+    .card-image .status-badge { position: absolute; top: 0.75rem; right: 0.75rem; padding: 0.3rem 0.6rem; border-radius: 6px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; }
+    .status-badge.vinnslu { background: var(--accent); color: #000; }
+    .status-badge.bidur { background: var(--warning); color: #000; }
+    .status-badge.lokid { background: #ccc; color: #333; }
+    .card-content { padding: 1rem; }
+    .card-title { font-size: 1rem; font-weight: 600; margin-bottom: 0.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .card-subtitle { color: var(--text-dim); font-size: 0.85rem; margin-bottom: 0.75rem; }
+    .card-meta { display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; color: var(--text-dim); }
+    
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; overflow-y: auto; padding: 2rem; }
+    .modal-overlay.active { display: flex; justify-content: center; }
+    .modal { background: #fff; border-radius: 16px; width: 100%; max-width: 900px; max-height: 90vh; overflow-y: auto; margin: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+    .modal-header { padding: 1.5rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: #fff; z-index: 10; }
+    .modal-title { font-size: 1.25rem; font-weight: 600; }
+    .modal-close { background: none; border: none; color: var(--text-dim); font-size: 1.5rem; cursor: pointer; }
+    .modal-close:hover { color: var(--text); }
+    .modal-body { padding: 1.5rem; }
+    .modal-footer { padding: 1.5rem; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 0.75rem; position: sticky; bottom: 0; background: #fff; }
+    
+    .tabs { display: flex; gap: 0.25rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); }
+    .tab { padding: 0.75rem 1rem; background: none; border: none; color: var(--text-dim); font-size: 0.9rem; cursor: pointer; position: relative; }
+    .tab:hover { color: var(--text); }
+    .tab.active { color: var(--accent); }
+    .tab.active::after { content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 2px; background: var(--accent); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    
+    .form-section { margin-bottom: 2rem; }
+    .form-section-title { font-size: 0.85rem; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border); }
+    .form-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 1rem; }
+    .form-row-3 { grid-template-columns: repeat(3, 1fr); }
+    .form-group { display: flex; flex-direction: column; gap: 0.4rem; }
+    .form-group.full-width { grid-column: 1 / -1; }
+    .form-group label { font-size: 0.85rem; color: var(--text-dim); }
+    .form-group input, .form-group select, .form-group textarea { padding: 0.6rem 0.8rem; background: #fff; border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: inherit; font-size: 0.9rem; }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--accent); }
+    .form-group textarea { min-height: 120px; resize: vertical; }
+    
+    .time-entry { display: flex; gap: 1rem; padding: 1rem; background: var(--bg-card); border-radius: 8px; margin-bottom: 0.75rem; align-items: flex-start; border: 1px solid var(--border); }
+    .time-entry-icon { width: 36px; height: 36px; background: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; }
+    .time-entry-content { flex: 1; }
+    .time-entry-title { font-weight: 500; margin-bottom: 0.25rem; }
+    .time-entry-meta { font-size: 0.8rem; color: var(--text-dim); }
+    .time-entry-delete { background: none; border: none; color: var(--text-dim); cursor: pointer; }
+    .time-entry-delete:hover { color: var(--danger); }
+    
+    .add-time-btn { display: flex; align-items: center; gap: 0.5rem; width: 100%; padding: 0.75rem; background: #fff; border: 1px dashed var(--border); border-radius: 8px; color: var(--text-dim); font-size: 0.9rem; cursor: pointer; }
+    .add-time-btn:hover { border-color: var(--accent); color: var(--accent); }
+    
+    .time-form { display: none; padding: 1rem; background: var(--bg-card); border-radius: 8px; margin-bottom: 1rem; border: 1px solid var(--border); }
+    .time-form.active { display: block; }
+    .time-type-btns { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+    .time-type-btn { flex: 1; padding: 0.6rem; background: #fff; border: 1px solid var(--border); border-radius: 8px; color: var(--text-dim); font-size: 0.85rem; cursor: pointer; }
+    .time-type-btn:hover { border-color: var(--accent); }
+    .time-type-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+    
+    .empty-state { text-align: center; padding: 4rem 2rem; color: var(--text-dim); }
+    .empty-state img { width: 80px; height: 80px; margin-bottom: 1rem; opacity: 0.4; }
+    .empty-state-title { font-size: 1.25rem; font-weight: 600; color: var(--text); margin-bottom: 0.5rem; }
+    
+    .footer { text-align: center; padding: 2rem; color: var(--text-dim); font-size: 0.8rem; }
+    .footer a { color: var(--accent); text-decoration: none; }
   </style>
 </head>
 <body>
   <header>
-    <div class="logo">
-      <svg width="45" height="28" viewBox="0 0 50 30">
-        <path d="M2 20 Q8 20 12 8 Q16 -4 20 15 Q24 34 28 15 Q32 -4 36 8 Q40 20 48 20" 
-              fill="none" stroke="#ED1C24" stroke-width="4" stroke-linecap="round"/>
-      </svg>
-      <span class="logo-text">Audioland</span>
-      <span class="logo-subtitle">verkefnastjórnun</span>
+    <div class="logo"><img src="logo.png" alt="Bessi"></div>
+    <div class="header-center">
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Leita í verkefnum og handritum...">
+      </div>
     </div>
     <div class="header-actions">
-      <div class="booth-status">
-        <div class="booth-dot" id="boothDot"></div>
-        <span id="boothStatusText">Booth ótengd</span>
-      </div>
-      <button class="btn btn-secondary" onclick="remoteScrollToggle()" title="Start/Stop scroll í booth">▶ Scroll</button>
+      <button class="btn btn-secondary" onclick="window.open('booth.html', 'booth', 'width=1200,height=800')">📺 Opna Booth</button>
       <button class="btn btn-primary" onclick="opnaModal()">+ Nýtt verkefni</button>
     </div>
   </header>
 
   <div class="container">
+    <div class="page-header"><h1 class="page-title">Verkefni</h1></div>
     <div class="filters">
       <button class="filter-btn active" data-filter="all">Öll</button>
-      <button class="filter-btn" data-filter="Bíður">Bíður</button>
       <button class="filter-btn" data-filter="Í vinnslu">Í vinnslu</button>
+      <button class="filter-btn" data-filter="Bíður">Bíður</button>
       <button class="filter-btn" data-filter="Lokið">Lokið</button>
     </div>
-
-    <div class="verkefni-grid" id="verkefniGrid">
+    <div class="grid" id="verkefniGrid"></div>
+    <div class="empty-state" id="emptyState" style="display: none;">
+      <img src="AppLogo.png" alt="Bessi">
+      <div class="empty-state-title">Engin verkefni fundust</div>
+      <p>Bessi hefur ekkert að sækja ennþá</p>
     </div>
   </div>
 
-  <!-- Modal -->
+  <footer class="footer">
+    <img src="AUDIOLAND_logo.png" alt="Audioland" style="height: 24px; opacity: 0.5; margin-bottom: 0.5rem;">
+    <div>Bessi er gerður af <a href="https://audioland.is" target="_blank">Audioland</a></div>
+  </footer>
+
   <div class="modal-overlay" id="modalOverlay">
     <div class="modal">
       <div class="modal-header">
         <h2 class="modal-title" id="modalTitle">Nýtt verkefni</h2>
         <button class="modal-close" onclick="lokaModal()">&times;</button>
       </div>
-
-      <form id="verkefniForm">
-        <input type="hidden" id="verkefniId">
-
-        <div class="form-section">
-          <div class="form-section-title">Grunnupplýsingar</div>
+      <div class="modal-body">
+        <div class="tabs">
+          <button class="tab active" data-tab="grunnur">Grunnupplýsingar</button>
+          <button class="tab" data-tab="tengilidir">Tengiliðir</button>
+          <button class="tab" data-tab="handrit">Handrit</button>
+          <button class="tab" data-tab="tonlist">Tónlist</button>
+          <button class="tab" data-tab="timi">Tímaskráning</button>
+        </div>
+        <form id="verkefniForm">
+          <input type="hidden" id="verkefniId" value="">
           
-          <div class="form-row">
-            <div class="form-group">
-              <label>Nafn verkefnis *</label>
-              <input type="text" id="nafn" required placeholder="t.d. Hagkaup sumarherferð">
+          <div class="tab-content active" id="tab-grunnur">
+            <div class="form-section">
+              <div class="form-section-title">Verkefni</div>
+              <div class="form-row">
+                <div class="form-group"><label>Nafn verkefnis *</label><input type="text" id="nafn" required></div>
+                <div class="form-group"><label>Staða</label><select id="stada"><option value="Í vinnslu">Í vinnslu</option><option value="Bíður">Bíður</option><option value="Lokið">Lokið</option></select></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>Mynd</label><input type="file" id="mynd" accept="image/*"></div>
+                <div class="form-group"><label>Lesari</label><input type="text" id="lesari" list="lesendurList"><datalist id="lesendurList"></datalist></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>Móttekið</label><input type="date" id="mottekid"></div>
+                <div class="form-group"><label>Skilað</label><input type="date" id="skilad"></div>
+              </div>
             </div>
-            <div class="form-group">
-              <label>Auglýsingastofa</label>
-              <input type="text" id="stofa" placeholder="t.d. Brandenburg" list="stofurList">
-              <datalist id="stofurList"></datalist>
+            <div class="form-section">
+              <div class="form-section-title">Tenglar</div>
+              <div class="form-row">
+                <div class="form-group"><label>Payday tengill</label><input type="url" id="payday_tengill" placeholder="https://payday.is/..."></div>
+                <div class="form-group"><label>Dropbox slóð</label><input type="text" id="dropbox_slod" placeholder="/Audioland/Verkefni/..."></div>
+              </div>
+            </div>
+            <div class="form-section">
+              <div class="form-section-title">Athugasemdir</div>
+              <div class="form-group full-width"><textarea id="athugasemdir" placeholder="Sérstakar athugasemdir..."></textarea></div>
             </div>
           </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label>Staða</label>
-              <select id="stada">
-                <option value="Bíður">Bíður</option>
-                <option value="Í vinnslu">Í vinnslu</option>
-                <option value="Lokið">Lokið</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Móttekið</label>
-              <input type="date" id="mottekid">
-            </div>
-          </div>
-        </div>
-
-        <div class="form-section">
-          <div class="form-section-title">Tengiliðir</div>
           
-          <div class="form-row-3">
-            <div class="form-group">
-              <label>Tengill (nafn)</label>
-              <input type="text" id="tengill_nafn" placeholder="Nafn">
+          <div class="tab-content" id="tab-tengilidir">
+            <div class="form-section">
+              <div class="form-section-title">Framleiðslufyrirtæki</div>
+              <div class="form-row form-row-3">
+                <div class="form-group"><label>Fyrirtæki</label><input type="text" id="framleidsla" list="framleidslaList"><datalist id="framleidslaList"></datalist></div>
+                <div class="form-group"><label>Pródúser</label><input type="text" id="produser"></div>
+                <div class="form-group"><label>Sími</label><input type="tel" id="produser_simi"></div>
+              </div>
+              <div class="form-row"><div class="form-group"><label>Netfang</label><input type="email" id="produser_netfang"></div></div>
             </div>
-            <div class="form-group">
-              <label>Sími</label>
-              <input type="tel" id="tengill_simi" placeholder="000-0000">
+            <div class="form-section">
+              <div class="form-section-title">Auglýsingastofa</div>
+              <div class="form-row form-row-3">
+                <div class="form-group"><label>Stofa</label><input type="text" id="stofa" list="stofurList"><datalist id="stofurList"></datalist></div>
+                <div class="form-group"><label>Tengiliður</label><input type="text" id="tengill_nafn"></div>
+                <div class="form-group"><label>Sími</label><input type="tel" id="tengill_simi"></div>
+              </div>
+              <div class="form-row"><div class="form-group"><label>Netfang</label><input type="email" id="tengill_netfang"></div></div>
+            </div>
+            <div class="form-section">
+              <div class="form-section-title">Teymi</div>
+              <div class="form-row">
+                <div class="form-group"><label>Art Director</label><input type="text" id="art_director"></div>
+                <div class="form-group"><label>Sími</label><input type="tel" id="art_director_simi"></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>Copywriter</label><input type="text" id="copywriter"></div>
+                <div class="form-group"><label>Sími</label><input type="tel" id="copywriter_simi"></div>
+              </div>
             </div>
           </div>
-
-          <div class="form-row-3">
-            <div class="form-group">
-              <label>Art Director</label>
-              <input type="text" id="art_director" placeholder="Nafn">
-            </div>
-            <div class="form-group">
-              <label>Sími</label>
-              <input type="tel" id="art_director_simi" placeholder="000-0000">
-            </div>
-          </div>
-
-          <div class="form-row-3">
-            <div class="form-group">
-              <label>Copywriter</label>
-              <input type="text" id="copywriter" placeholder="Nafn">
-            </div>
-            <div class="form-group">
-              <label>Sími</label>
-              <input type="tel" id="copywriter_simi" placeholder="000-0000">
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label>Lesari</label>
-            <input type="text" id="lesari" placeholder="Nafn lesara">
-          </div>
-        </div>
-
-        <div class="form-section">
-          <div class="form-section-title">Handrit</div>
-          <div class="form-group">
-            <label>Sækja úr Google Docs</label>
-            <div class="input-with-button">
-              <input type="text" id="googleDocsUrl" placeholder="Líma Google Docs link hér...">
-              <button type="button" class="btn btn-secondary btn-small" onclick="saekjaGoogleDoc()">Sækja</button>
-            </div>
-            <small style="color: var(--text-dim); font-size: 0.75rem;">Skjalið þarf að vera opið fyrir „Anyone with the link"</small>
-          </div>
-          <div class="form-group">
-            <label>Handrit</label>
-            <textarea id="handrit" placeholder="Settu handritið hér..."></textarea>
-          </div>
-        </div>
-
-        <div class="form-section">
-          <div class="form-section-title">Athugasemdir</div>
-          <div class="form-group">
-            <textarea id="athugasemdir" placeholder="Athugasemdir, leiðbeiningar, o.fl." style="min-height: 80px;"></textarea>
-          </div>
-        </div>
-
-        <div class="form-section">
-          <div class="form-section-title">Tenglar</div>
           
-          <div class="form-group">
-            <label>Payday tengill/númer</label>
-            <input type="text" id="payday_tengill" placeholder="Reikningsnr. eða tengill">
-          </div>
-
-          <div class="form-group">
-            <label>Dropbox slóð</label>
-            <div class="input-with-button">
-              <input type="text" id="dropbox_slod" placeholder="/Audioland/Verkefni/...">
-              <button type="button" class="btn btn-secondary btn-small" onclick="veljaDropboxMoppu()">Browse...</button>
+          <div class="tab-content" id="tab-handrit">
+            <div class="form-section">
+              <div class="form-section-title">Google Docs</div>
+              <div class="form-group full-width">
+                <label>Google Doc URL</label>
+                <input type="url" id="google_doc_url" placeholder="https://docs.google.com/document/d/...">
+                <small style="color: var(--text-dim);">Límdu inn hlekk á Google Doc og handritið uppfærist sjálfkrafa</small>
+              </div>
+            </div>
+            <div class="form-section">
+              <div class="form-section-title">Handrit</div>
+              <div class="form-group full-width">
+                <textarea id="handrit" style="min-height: 250px; font-family: monospace;" placeholder="Sláðu inn handrit eða tengdu Google Doc..."></textarea>
+              </div>
             </div>
           </div>
-        </div>
-
-        <div class="form-actions">
-          <button type="button" class="btn btn-secondary" onclick="lokaModal()">Hætta við</button>
-          <button type="submit" class="btn btn-primary">Vista</button>
-        </div>
-      </form>
+          
+          <div class="tab-content" id="tab-tonlist">
+            <div class="form-section">
+              <div class="form-section-title">Tónlistarkaup</div>
+              <div class="form-row">
+                <div class="form-group"><label>Titill</label><input type="text" id="tonlist_titill" placeholder="Nafn lags"></div>
+                <div class="form-group"><label>Heimild</label><input type="text" id="tonlist_heimild" placeholder="t.d. Extreme Music"></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>Tengill</label><input type="url" id="tonlist_url" placeholder="https://extrememusic.com/..."></div>
+                <div class="form-group"><label>Kostnaður (kr)</label><input type="number" id="tonlist_kostnadur" placeholder="0"></div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="tab-content" id="tab-timi">
+            <div class="form-section">
+              <div class="form-section-title">Skráðar færslur</div>
+              <div id="timaSkraningar"><p style="color: var(--text-dim);">Engar færslur skráðar</p></div>
+              <button type="button" class="add-time-btn" onclick="toggleTimeForm()">+ Bæta við færslu</button>
+              <div class="time-form" id="timeForm">
+                <div class="time-type-btns">
+                  <button type="button" class="time-type-btn active" data-type="timi">⏱️ Tími</button>
+                  <button type="button" class="time-type-btn" data-type="simtal">📞 Símtal</button>
+                  <button type="button" class="time-type-btn" data-type="email">✉️ Email</button>
+                  <button type="button" class="time-type-btn" data-type="fundur">📅 Fundur</button>
+                </div>
+                <div class="form-row">
+                  <div class="form-group"><label>Titill</label><input type="text" id="time_titill" placeholder="Lýsing"></div>
+                  <div class="form-group"><label>Dagsetning</label><input type="date" id="time_dagsetning"></div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group"><label>Tími (mín)</label><input type="number" id="time_minutur" placeholder="60"></div>
+                  <div class="form-group"><label>&nbsp;</label><button type="button" class="btn btn-primary" onclick="baetaVidTima()">Bæta við</button></div>
+                </div>
+              </div>
+            </div>
+            <div class="form-section">
+              <div class="form-section-title">Samtals</div>
+              <div style="display: flex; gap: 2rem; color: var(--text-dim);">
+                <div><strong id="totalTimi">0</strong> mín</div>
+                <div><strong id="totalSimtol">0</strong> símtöl</div>
+                <div><strong id="totalEmail">0</strong> email</div>
+                <div><strong id="totalFundir">0</strong> fundir</div>
+              </div>
+            </div>
+            <div class="form-section">
+              <button type="button" class="btn btn-secondary" onclick="downloadPDF()">📄 Sækja PDF skýrslu</button>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="lokaModal()">Hætta við</button>
+        <button type="button" class="btn btn-secondary" id="sendaBoothBtn" style="display: none;" onclick="sendaIBooth()">📺 Senda í Booth</button>
+        <button type="button" class="btn btn-primary" onclick="vistaVerkefni()">Vista</button>
+      </div>
     </div>
   </div>
 
   <script>
     let verkefni = [];
     let currentFilter = 'all';
+    let currentTimeType = 'timi';
+    let tempTimaSkraningar = [];
+    let ws = null;
+
+    function connectWS() {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(protocol + '//' + window.location.host + '/dashboard-ws');
+      ws.onclose = () => setTimeout(connectWS, 3000);
+    }
+    connectWS();
 
     async function saekjaVerkefni() {
-      const res = await fetch('/api/verkefni');
-      verkefni = await res.json();
-      birtaVerkefni();
+      try {
+        const res = await fetch('/api/verkefni');
+        verkefni = await res.json();
+        birtaVerkefni();
+      } catch (err) { console.error(err); }
     }
 
     async function saekjaStofur() {
-      const res = await fetch('/api/stofur');
-      const stofur = await res.json();
-      const datalist = document.getElementById('stofurList');
-      datalist.innerHTML = stofur.map(s => `<option value="${s.nafn}">`).join('');
+      try {
+        const res = await fetch('/api/stofur');
+        const stofur = await res.json();
+        document.getElementById('stofurList').innerHTML = stofur.map(s => '<option value="' + s.nafn + '">').join('');
+      } catch (err) {}
+    }
+
+    async function saekjaFramleidslu() {
+      try {
+        const res = await fetch('/api/framleidsla');
+        const data = await res.json();
+        document.getElementById('framleidslaList').innerHTML = data.map(f => '<option value="' + f.nafn + '">').join('');
+      } catch (err) {}
     }
 
     function birtaVerkefni() {
       const grid = document.getElementById('verkefniGrid');
-      
+      const empty = document.getElementById('emptyState');
+      const search = document.getElementById('searchInput').value.toLowerCase();
       let filtered = verkefni;
-      if (currentFilter !== 'all') {
-        filtered = verkefni.filter(v => v.stada === currentFilter);
-      }
-
-      if (filtered.length === 0) {
-        grid.innerHTML = `
-          <div class="empty-state" style="grid-column: 1 / -1;">
-            <h2>Engin verkefni</h2>
-            <p>Smelltu á „Nýtt verkefni" til að byrja</p>
-          </div>
-        `;
-        return;
-      }
-
-      grid.innerHTML = filtered.map(v => {
-        const stadaClass = v.stada === 'Bíður' ? 'stada-bidur' : 
-                          v.stada === 'Í vinnslu' ? 'stada-vinnslu' : 'stada-lokid';
-        
-        return `
-          <div class="verkefni-card">
-            <div class="verkefni-header">
-              <div class="verkefni-nafn">${escapeHtml(v.nafn)}</div>
-              <div class="verkefni-stada ${stadaClass}">${v.stada}</div>
-            </div>
-            
-            <div class="verkefni-meta">
-              ${v.stofa ? `<div class="meta-item"><span class="meta-label">Stofa</span><span class="meta-value">${escapeHtml(v.stofa)}</span></div>` : ''}
-              ${v.lesari ? `<div class="meta-item"><span class="meta-label">Lesari</span><span class="meta-value">${escapeHtml(v.lesari)}</span></div>` : ''}
-              ${v.tengill_nafn ? `<div class="meta-item"><span class="meta-label">Tengill</span><span class="meta-value">${escapeHtml(v.tengill_nafn)}${v.tengill_simi ? ' · ' + escapeHtml(v.tengill_simi) : ''}</span></div>` : ''}
-              ${v.art_director ? `<div class="meta-item"><span class="meta-label">Art Director</span><span class="meta-value">${escapeHtml(v.art_director)}${v.art_director_simi ? ' · ' + escapeHtml(v.art_director_simi) : ''}</span></div>` : ''}
-              ${v.copywriter ? `<div class="meta-item"><span class="meta-label">Copywriter</span><span class="meta-value">${escapeHtml(v.copywriter)}${v.copywriter_simi ? ' · ' + escapeHtml(v.copywriter_simi) : ''}</span></div>` : ''}
-            </div>
-
-            ${v.athugasemdir ? `<div class="verkefni-athugasemdir">${escapeHtml(v.athugasemdir)}</div>` : ''}
-            
-            ${v.handrit ? `<div class="verkefni-handrit">${escapeHtml(v.handrit)}</div>` : ''}
-            
-            <div class="verkefni-actions">
-              <button class="btn btn-primary" onclick="birtaIBooth(${v.id})">📺 Booth</button>
-              <button class="btn btn-secondary" onclick="breytaVerkefni(${v.id})">✏️ Breyta</button>
-              <button class="btn btn-danger" onclick="eydaVerkefni(${v.id})">🗑️</button>
-            </div>
-
-            <div class="booth-controls">
-              <label>
-                Leturstærð
-                <select id="fontSize_${v.id}" onchange="updateBoothSettings(${v.id})">
-                  <option value="1">Lítil</option>
-                  <option value="2" selected>Miðlungs</option>
-                  <option value="3">Stór</option>
-                  <option value="4">Mjög stór</option>
-                </select>
-              </label>
-              <label>
-                <input type="checkbox" id="autoScroll_${v.id}" onchange="updateBoothSettings(${v.id})">
-                Autoscroll
-              </label>
-              <label>
-                Hraði
-                <input type="number" id="scrollSpeed_${v.id}" value="50" min="10" max="200" style="width: 60px;" onchange="updateBoothSettings(${v.id})">
-              </label>
-            </div>
-          </div>
-        `;
-      }).join('');
+      if (currentFilter !== 'all') filtered = filtered.filter(v => v.stada === currentFilter);
+      if (search) filtered = filtered.filter(v => (v.nafn||'').toLowerCase().includes(search) || (v.lesari||'').toLowerCase().includes(search) || (v.stofa||'').toLowerCase().includes(search) || (v.handrit||'').toLowerCase().includes(search));
+      
+      if (filtered.length === 0) { grid.innerHTML = ''; empty.style.display = 'block'; return; }
+      empty.style.display = 'none';
+      
+      grid.innerHTML = filtered.map(v => '<div class="card" onclick="opnaVerkefni(' + v.id + ')"><div class="card-image">' + (v.mynd ? '<img src="' + v.mynd + '">' : '<img class="placeholder" src="AppLogo.png" alt="">') + '<span class="status-badge ' + getStatusClass(v.stada) + '">' + v.stada + '</span></div><div class="card-content"><div class="card-title">' + v.nafn + '</div><div class="card-subtitle">' + (v.lesari || 'Enginn lesari') + '</div><div class="card-meta"><div>' + (v.stofa || '—') + '</div><div>' + formatDate(v.mottekid) + '</div></div></div></div>').join('');
     }
 
-    function escapeHtml(text) {
-      if (!text) return '';
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
+    function getStatusClass(stada) {
+      if (stada === 'Í vinnslu') return 'vinnslu';
+      if (stada === 'Bíður') return 'bidur';
+      return 'lokid';
     }
 
-    function opnaModal(id = null) {
+    function formatDate(date) {
+      if (!date) return '—';
+      return new Date(date).toLocaleDateString('is-IS');
+    }
+
+    function opnaModal() {
       document.getElementById('modalOverlay').classList.add('active');
+      document.getElementById('modalTitle').textContent = 'Nýtt verkefni';
+      document.getElementById('sendaBoothBtn').style.display = 'none';
       document.getElementById('verkefniForm').reset();
       document.getElementById('verkefniId').value = '';
-      document.getElementById('modalTitle').textContent = 'Nýtt verkefni';
-      document.getElementById('googleDocsUrl').value = '';
-      
-      if (id) {
-        const v = verkefni.find(x => x.id === id);
-        if (v) {
-          document.getElementById('modalTitle').textContent = 'Breyta verkefni';
-          document.getElementById('verkefniId').value = v.id;
-          document.getElementById('nafn').value = v.nafn || '';
-          document.getElementById('stofa').value = v.stofa || '';
-          document.getElementById('tengill_nafn').value = v.tengill_nafn || '';
-          document.getElementById('tengill_simi').value = v.tengill_simi || '';
-          document.getElementById('art_director').value = v.art_director || '';
-          document.getElementById('art_director_simi').value = v.art_director_simi || '';
-          document.getElementById('copywriter').value = v.copywriter || '';
-          document.getElementById('copywriter_simi').value = v.copywriter_simi || '';
-          document.getElementById('lesari').value = v.lesari || '';
-          document.getElementById('handrit').value = v.handrit || '';
-          document.getElementById('googleDocsUrl').value = v.google_doc_url || '';
-          document.getElementById('athugasemdir').value = v.athugasemdir || '';
-          document.getElementById('stada').value = v.stada || 'Bíður';
-          document.getElementById('payday_tengill').value = v.payday_tengill || '';
-          document.getElementById('dropbox_slod').value = v.dropbox_slod || '';
-          document.getElementById('mottekid').value = v.mottekid || '';
-        }
-      }
+      tempTimaSkraningar = [];
+      birtaTimaSkraningar();
+      switchTab('grunnur');
     }
 
     function lokaModal() {
       document.getElementById('modalOverlay').classList.remove('active');
     }
 
-    function breytaVerkefni(id) {
-      opnaModal(id);
-    }
-
-    function veljaDropboxMoppu() {
-      // Þetta þarf Dropbox API eða native file picker
-      // Fyrir núna, sýnum bara alert
-      alert('Browse virkni krefst Dropbox API tengingar.\n\nÞú getur afritað slóðina úr Dropbox og límt hér.');
-    }
-
-    async function saekjaGoogleDoc() {
-      const url = document.getElementById('googleDocsUrl').value.trim();
-      
-      if (!url) {
-        alert('Settu inn Google Docs link');
-        return;
-      }
-      
-      if (!url.includes('docs.google.com')) {
-        alert('Þetta lítur ekki út eins og Google Docs link');
-        return;
-      }
-
+    async function opnaVerkefni(id) {
       try {
-        const res = await fetch('/api/google-docs/fetch', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url })
+        const res = await fetch('/api/verkefni/' + id);
+        const v = await res.json();
+        document.getElementById('modalOverlay').classList.add('active');
+        document.getElementById('modalTitle').textContent = 'Opna verk';
+        document.getElementById('sendaBoothBtn').style.display = 'inline-flex';
+        
+        document.getElementById('verkefniId').value = v.id;
+        ['nafn','stada','lesari','mottekid','skilad','payday_tengill','dropbox_slod','athugasemdir','framleidsla','produser','produser_simi','produser_netfang','stofa','tengill_nafn','tengill_simi','tengill_netfang','art_director','art_director_simi','copywriter','copywriter_simi','google_doc_url','handrit','tonlist_titill','tonlist_heimild','tonlist_url','tonlist_kostnadur'].forEach(f => {
+          const el = document.getElementById(f);
+          if (el) el.value = v[f] || '';
         });
         
-        const data = await res.json();
-        
-        if (data.error) {
-          alert(data.error);
-          return;
-        }
-        
-        document.getElementById('handrit').value = data.text;
-        // Halda URL-inum inni
-        
-      } catch (error) {
-        alert('Villa við að sækja skjal');
-        console.error(error);
-      }
+        await saekjaTimaskraningar(v.id);
+        switchTab('grunnur');
+      } catch (err) { console.error(err); }
     }
 
-    document.getElementById('verkefniForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      
+    async function vistaVerkefni() {
       const id = document.getElementById('verkefniId').value;
-      const data = {
-        nafn: document.getElementById('nafn').value,
-        stofa: document.getElementById('stofa').value,
-        tengill_nafn: document.getElementById('tengill_nafn').value,
-        tengill_simi: document.getElementById('tengill_simi').value,
-        art_director: document.getElementById('art_director').value,
-        art_director_simi: document.getElementById('art_director_simi').value,
-        copywriter: document.getElementById('copywriter').value,
-        copywriter_simi: document.getElementById('copywriter_simi').value,
-        lesari: document.getElementById('lesari').value,
-        handrit: document.getElementById('handrit').value,
-        google_doc_url: document.getElementById('googleDocsUrl').value,
-        athugasemdir: document.getElementById('athugasemdir').value,
-        stada: document.getElementById('stada').value,
-        payday_tengill: document.getElementById('payday_tengill').value,
-        dropbox_slod: document.getElementById('dropbox_slod').value,
-        mottekid: document.getElementById('mottekid').value
-      };
-
-      if (id) {
-        await fetch(`/api/verkefni/${id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-      } else {
-        await fetch('/api/verkefni', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
-        });
-      }
-
-      lokaModal();
-      saekjaVerkefni();
-    });
-
-    async function eydaVerkefni(id) {
-      if (!confirm('Ertu viss um að þú viljir eyða þessu verkefni?')) return;
+      const data = {};
+      ['nafn','stada','lesari','mottekid','skilad','payday_tengill','dropbox_slod','athugasemdir','framleidsla','produser','produser_simi','produser_netfang','stofa','tengill_nafn','tengill_simi','tengill_netfang','art_director','art_director_simi','copywriter','copywriter_simi','google_doc_url','handrit','tonlist_titill','tonlist_heimild','tonlist_url','tonlist_kostnadur'].forEach(f => {
+        const el = document.getElementById(f);
+        if (el) data[f] = el.value;
+      });
       
-      await fetch(`/api/verkefni/${id}`, { method: 'DELETE' });
-      saekjaVerkefni();
+      try {
+        await fetch(id ? '/api/verkefni/' + id : '/api/verkefni', {
+          method: id ? 'PUT' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        lokaModal();
+        saekjaVerkefni();
+      } catch (err) { console.error(err); alert('Villa við vistun'); }
     }
 
-    async function birtaIBooth(id) {
-      const fontSize = document.getElementById(`fontSize_${id}`)?.value || 2;
-      const autoScroll = document.getElementById(`autoScroll_${id}`)?.checked || false;
-      const scrollSpeed = document.getElementById(`scrollSpeed_${id}`)?.value || 50;
-
-      await fetch('/api/booth/birta', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          verkefni_id: id, 
-          take_number: 1,
-          fontSize: parseInt(fontSize),
-          autoScroll,
-          scrollSpeed: parseInt(scrollSpeed)
-        })
-      });
+    function sendaIBooth() {
+      const nafn = document.getElementById('nafn').value;
+      const handrit = document.getElementById('handrit').value;
+      const lesari = document.getElementById('lesari').value;
+      if (ws && ws.readyState === 1) {
+        ws.send(JSON.stringify({ type: 'handrit', nafn, handrit, lesari, take: 1 }));
+        alert('Sent í booth!');
+      }
     }
 
-    async function updateBoothSettings(id) {
-      const fontSize = document.getElementById(`fontSize_${id}`)?.value || 2;
-      const autoScroll = document.getElementById(`autoScroll_${id}`)?.checked || false;
-      const scrollSpeed = document.getElementById(`scrollSpeed_${id}`)?.value || 50;
-
-      await fetch('/api/booth/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          fontSize: parseInt(fontSize),
-          autoScroll,
-          scrollSpeed: parseInt(scrollSpeed)
-        })
-      });
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      document.querySelector('[data-tab="' + tabId + '"]').classList.add('active');
+      document.getElementById('tab-' + tabId).classList.add('active');
     }
 
-    async function remoteScrollToggle() {
-      await fetch('/api/booth/scroll-toggle', { method: 'POST' });
+    document.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', () => switchTab(tab.dataset.tab)));
+    document.querySelectorAll('.filter-btn').forEach(btn => btn.addEventListener('click', () => {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentFilter = btn.dataset.filter;
+      birtaVerkefni();
+    }));
+    document.getElementById('searchInput').addEventListener('input', birtaVerkefni);
+    document.querySelectorAll('.time-type-btn').forEach(btn => btn.addEventListener('click', () => {
+      document.querySelectorAll('.time-type-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentTimeType = btn.dataset.type;
+    }));
+
+    function toggleTimeForm() {
+      document.getElementById('timeForm').classList.toggle('active');
+      document.getElementById('time_dagsetning').value = new Date().toISOString().split('T')[0];
     }
 
-    document.querySelectorAll('.filter-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        currentFilter = btn.dataset.filter;
-        birtaVerkefni();
-      });
-    });
+    async function saekjaTimaskraningar(verkefniId) {
+      try {
+        const res = await fetch('/api/verkefni/' + verkefniId + '/timi');
+        tempTimaSkraningar = await res.json();
+        birtaTimaSkraningar();
+      } catch (err) { tempTimaSkraningar = []; birtaTimaSkraningar(); }
+    }
 
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') lokaModal();
-    });
+    function birtaTimaSkraningar() {
+      const container = document.getElementById('timaSkraningar');
+      if (tempTimaSkraningar.length === 0) { container.innerHTML = '<p style="color: var(--text-dim);">Engar færslur</p>'; updateTotals(); return; }
+      const icons = { timi: '⏱️', simtal: '📞', email: '✉️', fundur: '📅' };
+      container.innerHTML = tempTimaSkraningar.map(t => '<div class="time-entry"><div class="time-entry-icon">' + (icons[t.tegund] || '📝') + '</div><div class="time-entry-content"><div class="time-entry-title">' + (t.titill || t.tegund) + '</div><div class="time-entry-meta">' + (t.timi_minutur ? t.timi_minutur + ' mín • ' : '') + formatDate(t.dagsetning) + '</div></div><button class="time-entry-delete" onclick="eydaTima(' + t.id + ')">🗑️</button></div>').join('');
+      updateTotals();
+    }
+
+    function updateTotals() {
+      document.getElementById('totalTimi').textContent = tempTimaSkraningar.filter(t => t.tegund === 'timi').reduce((s, t) => s + (t.timi_minutur || 0), 0);
+      document.getElementById('totalSimtol').textContent = tempTimaSkraningar.filter(t => t.tegund === 'simtal').length;
+      document.getElementById('totalEmail').textContent = tempTimaSkraningar.filter(t => t.tegund === 'email').length;
+      document.getElementById('totalFundir').textContent = tempTimaSkraningar.filter(t => t.tegund === 'fundur').length;
+    }
+
+    async function baetaVidTima() {
+      const verkefniId = document.getElementById('verkefniId').value;
+      if (!verkefniId) { alert('Vista verkefnið fyrst'); return; }
+      const data = { tegund: currentTimeType, titill: document.getElementById('time_titill').value, dagsetning: document.getElementById('time_dagsetning').value, timi_minutur: parseInt(document.getElementById('time_minutur').value) || 0 };
+      try {
+        await fetch('/api/verkefni/' + verkefniId + '/timi', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+        document.getElementById('time_titill').value = '';
+        document.getElementById('time_minutur').value = '';
+        document.getElementById('timeForm').classList.remove('active');
+        await saekjaTimaskraningar(verkefniId);
+      } catch (err) { console.error(err); }
+    }
+
+    async function eydaTima(id) {
+      if (!confirm('Eyða færslu?')) return;
+      try {
+        await fetch('/api/timi/' + id, { method: 'DELETE' });
+        await saekjaTimaskraningar(document.getElementById('verkefniId').value);
+      } catch (err) { console.error(err); }
+    }
+
+    function downloadPDF() {
+      const verkefniId = document.getElementById('verkefniId').value;
+      if (!verkefniId) { alert('Vista verkefnið fyrst'); return; }
+      window.open('/api/verkefni/' + verkefniId + '/pdf', '_blank');
+    }
+
+    document.getElementById('modalOverlay').addEventListener('click', e => { if (e.target === document.getElementById('modalOverlay')) lokaModal(); });
 
     saekjaVerkefni();
     saekjaStofur();
+    saekjaFramleidslu();
   </script>
 </body>
 </html>

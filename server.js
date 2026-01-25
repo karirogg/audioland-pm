@@ -20,22 +20,12 @@ let googleAuth = null;
 
 function getGoogleAuth() {
   if (googleAuth) return googleAuth;
-  
-  if (!fs.existsSync(CREDENTIALS_PATH) || !fs.existsSync(TOKEN_PATH)) {
-    return null;
-  }
-  
+  if (!fs.existsSync(CREDENTIALS_PATH) || !fs.existsSync(TOKEN_PATH)) return null;
   try {
     const credentials = JSON.parse(fs.readFileSync(CREDENTIALS_PATH));
     const token = JSON.parse(fs.readFileSync(TOKEN_PATH));
     const { client_id, client_secret } = credentials.installed || credentials.web;
-    
-    const oauth2Client = new google.auth.OAuth2(
-      client_id,
-      client_secret,
-      'http://localhost:3001/oauth2callback'
-    );
-    
+    const oauth2Client = new google.auth.OAuth2(client_id, client_secret, 'http://localhost:3001/oauth2callback');
     oauth2Client.setCredentials(token);
     googleAuth = oauth2Client;
     return oauth2Client;
@@ -45,64 +35,51 @@ function getGoogleAuth() {
   }
 }
 
-// WebSocket tengingar - til að synca booth
+// WebSocket
 let boothClients = [];
-let currentBoothState = {
-  handrit: '',
-  nafn: '',
-  lesari: '',
-  take: 1,
-  fontSize: 2,
-  autoScroll: false,
-  scrollSpeed: 50
-};
+let dashboardClients = [];
+let currentBoothState = { handrit: '', nafn: '', lesari: '', take: 1, fontSize: 2, autoScroll: false, scrollSpeed: 50 };
 
 wss.on('connection', (ws, req) => {
   if (req.url === '/booth-ws') {
     boothClients.push(ws);
     console.log('Booth tengdist');
-    
-    // Senda núverandi stöðu til nýs booth
     ws.send(JSON.stringify({ type: 'state', ...currentBoothState }));
-    
-    ws.on('close', () => {
-      boothClients = boothClients.filter(client => client !== ws);
-      console.log('Booth aftengdist');
+    ws.on('close', () => { boothClients = boothClients.filter(c => c !== ws); console.log('Booth aftengdist'); });
+  } else if (req.url === '/dashboard-ws') {
+    dashboardClients.push(ws);
+    console.log('Dashboard tengdist');
+    ws.on('message', (msg) => {
+      try {
+        const data = JSON.parse(msg);
+        if (data.type === 'handrit') {
+          currentBoothState = { ...currentBoothState, ...data };
+          boothClients.forEach(c => { if (c.readyState === 1) c.send(JSON.stringify(data)); });
+        }
+      } catch (err) {}
     });
+    ws.on('close', () => { dashboardClients = dashboardClients.filter(c => c !== ws); });
   }
 });
 
 function broadcastToBooth(data) {
-  // Uppfæra state
-  if (data.type === 'handrit') {
-    currentBoothState = { ...currentBoothState, ...data };
-  } else if (data.type === 'settings') {
-    currentBoothState = { ...currentBoothState, ...data };
-  }
-  
-  boothClients.forEach(client => {
-    if (client.readyState === 1) {
-      client.send(JSON.stringify(data));
-    }
-  });
+  if (data.type === 'handrit' || data.type === 'settings') currentBoothState = { ...currentBoothState, ...data };
+  boothClients.forEach(c => { if (c.readyState === 1) c.send(JSON.stringify(data)); });
 }
 
-// Helper til að keyra queries
+// DB helpers
 function dbAll(sql, params = []) {
   const db = getDb();
   const stmt = db.prepare(sql);
   if (params.length) stmt.bind(params);
   const results = [];
-  while (stmt.step()) {
-    results.push(stmt.getAsObject());
-  }
+  while (stmt.step()) results.push(stmt.getAsObject());
   stmt.free();
   return results;
 }
 
 function dbGet(sql, params = []) {
-  const results = dbAll(sql, params);
-  return results[0] || null;
+  return dbAll(sql, params)[0] || null;
 }
 
 function dbRun(sql, params = []) {
@@ -112,269 +89,209 @@ function dbRun(sql, params = []) {
   return { lastInsertRowid: db.exec("SELECT last_insert_rowid()")[0]?.values[0][0] };
 }
 
-// API routes
-
-// Sækja öll verkefni
+// API - Verkefni
 app.get('/api/verkefni', (req, res) => {
-  const verkefni = dbAll('SELECT * FROM audlysingar ORDER BY created_at DESC');
+  const verkefni = dbAll('SELECT * FROM verkefni ORDER BY created_at DESC');
   res.json(verkefni);
 });
 
-// Sækja eitt verkefni
 app.get('/api/verkefni/:id', (req, res) => {
-  const verkefni = dbGet('SELECT * FROM audlysingar WHERE id = ?', [req.params.id]);
-  
-  if (!verkefni) {
-    return res.status(404).json({ error: 'Verkefni fannst ekki' });
-  }
+  const verkefni = dbGet('SELECT * FROM verkefni WHERE id = ?', [req.params.id]);
+  if (!verkefni) return res.status(404).json({ error: 'Verkefni fannst ekki' });
   res.json(verkefni);
 });
 
-// Búa til nýtt verkefni
 app.post('/api/verkefni', (req, res) => {
-  const {
-    nafn, stofa, tengill_nafn, tengill_simi,
-    art_director, art_director_simi, copywriter, copywriter_simi,
-    lesari, handrit, google_doc_url, athugasemdir, stada, payday_tengill, dropbox_slod, mottekid, skilad
-  } = req.body;
-
-  // Extracta doc ID úr URL
+  const b = req.body;
   let google_doc_id = '';
-  if (google_doc_url) {
-    const match = google_doc_url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if (b.google_doc_url) {
+    const match = b.google_doc_url.match(/\/d\/([a-zA-Z0-9_-]+)/);
     if (match) google_doc_id = match[1];
   }
-
+  
   const result = dbRun(`
-    INSERT INTO audlysingar (
-      nafn, stofa, tengill_nafn, tengill_simi,
-      art_director, art_director_simi, copywriter, copywriter_simi,
-      lesari, handrit, google_doc_url, google_doc_id, athugasemdir, stada, payday_tengill, dropbox_slod, mottekid, skilad
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO verkefni (nafn, mynd, framleidsla, produser, produser_simi, produser_netfang,
+      stofa, tengill_nafn, tengill_simi, tengill_netfang, art_director, art_director_simi,
+      copywriter, copywriter_simi, lesari, handrit, google_doc_url, google_doc_id,
+      tonlist_titill, tonlist_heimild, tonlist_url, tonlist_kostnadur,
+      stada, athugasemdir, payday_tengill, dropbox_slod, mottekid, skilad)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
   `, [
-    nafn || '', stofa || '', tengill_nafn || '', tengill_simi || '',
-    art_director || '', art_director_simi || '', copywriter || '', copywriter_simi || '',
-    lesari || '', handrit || '', google_doc_url || '', google_doc_id || '', athugasemdir || '', stada || 'Bíður', 
-    payday_tengill || '', dropbox_slod || '', mottekid || '', skilad || ''
+    b.nafn||'', b.mynd||'', b.framleidsla||'', b.produser||'', b.produser_simi||'', b.produser_netfang||'',
+    b.stofa||'', b.tengill_nafn||'', b.tengill_simi||'', b.tengill_netfang||'', b.art_director||'', b.art_director_simi||'',
+    b.copywriter||'', b.copywriter_simi||'', b.lesari||'', b.handrit||'', b.google_doc_url||'', google_doc_id,
+    b.tonlist_titill||'', b.tonlist_heimild||'', b.tonlist_url||'', b.tonlist_kostnadur||0,
+    b.stada||'Í vinnslu', b.athugasemdir||'', b.payday_tengill||'', b.dropbox_slod||'', b.mottekid||'', b.skilad||''
   ]);
-
   res.json({ id: result.lastInsertRowid, message: 'Verkefni búið til' });
 });
 
-// Uppfæra verkefni
 app.put('/api/verkefni/:id', (req, res) => {
-  const {
-    nafn, stofa, tengill_nafn, tengill_simi,
-    art_director, art_director_simi, copywriter, copywriter_simi,
-    lesari, handrit, google_doc_url, athugasemdir, stada, payday_tengill, dropbox_slod, mottekid, skilad
-  } = req.body;
-
-  // Extracta doc ID úr URL
+  const b = req.body;
   let google_doc_id = '';
-  if (google_doc_url) {
-    const match = google_doc_url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+  if (b.google_doc_url) {
+    const match = b.google_doc_url.match(/\/d\/([a-zA-Z0-9_-]+)/);
     if (match) google_doc_id = match[1];
   }
-
+  
   dbRun(`
-    UPDATE audlysingar SET
-      nafn = ?, stofa = ?, tengill_nafn = ?, tengill_simi = ?,
-      art_director = ?, art_director_simi = ?, copywriter = ?, copywriter_simi = ?,
-      lesari = ?, handrit = ?, google_doc_url = ?, google_doc_id = ?, athugasemdir = ?, stada = ?, payday_tengill = ?, dropbox_slod = ?,
-      mottekid = ?, skilad = ?, updated_at = CURRENT_TIMESTAMP
-    WHERE id = ?
+    UPDATE verkefni SET nafn=?, mynd=?, framleidsla=?, produser=?, produser_simi=?, produser_netfang=?,
+      stofa=?, tengill_nafn=?, tengill_simi=?, tengill_netfang=?, art_director=?, art_director_simi=?,
+      copywriter=?, copywriter_simi=?, lesari=?, handrit=?, google_doc_url=?, google_doc_id=?,
+      tonlist_titill=?, tonlist_heimild=?, tonlist_url=?, tonlist_kostnadur=?,
+      stada=?, athugasemdir=?, payday_tengill=?, dropbox_slod=?, mottekid=?, skilad=?, updated_at=CURRENT_TIMESTAMP
+    WHERE id=?
   `, [
-    nafn || '', stofa || '', tengill_nafn || '', tengill_simi || '',
-    art_director || '', art_director_simi || '', copywriter || '', copywriter_simi || '',
-    lesari || '', handrit || '', google_doc_url || '', google_doc_id || '', athugasemdir || '', stada || 'Bíður', 
-    payday_tengill || '', dropbox_slod || '',
-    mottekid || '', skilad || '',
+    b.nafn||'', b.mynd||'', b.framleidsla||'', b.produser||'', b.produser_simi||'', b.produser_netfang||'',
+    b.stofa||'', b.tengill_nafn||'', b.tengill_simi||'', b.tengill_netfang||'', b.art_director||'', b.art_director_simi||'',
+    b.copywriter||'', b.copywriter_simi||'', b.lesari||'', b.handrit||'', b.google_doc_url||'', google_doc_id,
+    b.tonlist_titill||'', b.tonlist_heimild||'', b.tonlist_url||'', b.tonlist_kostnadur||0,
+    b.stada||'Í vinnslu', b.athugasemdir||'', b.payday_tengill||'', b.dropbox_slod||'', b.mottekid||'', b.skilad||'',
     req.params.id
   ]);
-
   res.json({ message: 'Verkefni uppfært' });
 });
 
-// Eyða verkefni
 app.delete('/api/verkefni/:id', (req, res) => {
-  dbRun('DELETE FROM audlysingar WHERE id = ?', [req.params.id]);
+  dbRun('DELETE FROM verkefni WHERE id = ?', [req.params.id]);
+  dbRun('DELETE FROM timaskraning WHERE verkefni_id = ?', [req.params.id]);
   res.json({ message: 'Verkefni eytt' });
 });
 
-// Senda handrit í booth
-app.post('/api/booth/birta', (req, res) => {
-  const { verkefni_id, take_number, fontSize, autoScroll, scrollSpeed } = req.body;
-  
-  const verkefni = dbGet('SELECT nafn, handrit, lesari, google_doc_id FROM audlysingar WHERE id = ?', [verkefni_id]);
-
-  if (!verkefni) {
-    return res.status(404).json({ error: 'Verkefni fannst ekki' });
-  }
-
-  broadcastToBooth({
-    type: 'handrit',
-    nafn: verkefni.nafn,
-    handrit: verkefni.handrit,
-    lesari: verkefni.lesari,
-    googleDocId: verkefni.google_doc_id || null,
-    take: take_number || 1,
-    fontSize: fontSize || 2,
-    autoScroll: autoScroll || false,
-    scrollSpeed: scrollSpeed || 50
-  });
-
-  res.json({ message: 'Sent í booth' });
+// API - Tímaskráning
+app.get('/api/verkefni/:id/timi', (req, res) => {
+  const timi = dbAll('SELECT * FROM timaskraning WHERE verkefni_id = ? ORDER BY dagsetning DESC', [req.params.id]);
+  res.json(timi);
 });
 
-// Hreinsa booth
-app.post('/api/booth/hreinsa', (req, res) => {
-  broadcastToBooth({ type: 'hreinsa' });
-  res.json({ message: 'Booth hreinsað' });
+app.post('/api/verkefni/:id/timi', (req, res) => {
+  const { tegund, titill, lysing, timi_minutur, dagsetning } = req.body;
+  const result = dbRun(`
+    INSERT INTO timaskraning (verkefni_id, tegund, titill, lysing, timi_minutur, dagsetning)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `, [req.params.id, tegund||'', titill||'', lysing||'', timi_minutur||0, dagsetning||'']);
+  res.json({ id: result.lastInsertRowid, message: 'Tímaskráning bætt við' });
 });
 
-// Uppfæra take númer
-app.post('/api/booth/take', (req, res) => {
-  const { take_number } = req.body;
-  broadcastToBooth({ type: 'take', take: take_number });
-  res.json({ message: 'Take uppfært' });
+app.delete('/api/timi/:id', (req, res) => {
+  dbRun('DELETE FROM timaskraning WHERE id = ?', [req.params.id]);
+  res.json({ message: 'Tímaskráning eytt' });
 });
 
-// Uppfæra booth stillingar (leturstærð, autoscroll)
-app.post('/api/booth/settings', (req, res) => {
-  const { fontSize, autoScroll, scrollSpeed } = req.body;
-  broadcastToBooth({ 
-    type: 'settings', 
-    fontSize, 
-    autoScroll, 
-    scrollSpeed 
-  });
-  res.json({ message: 'Stillingar uppfærðar' });
-});
-
-// Remote scroll toggle
-app.post('/api/booth/scroll-toggle', (req, res) => {
-  broadcastToBooth({ type: 'scroll-toggle' });
-  res.json({ message: 'Scroll toggled' });
-});
-
-// Sækja auglýsingastofur
+// API - Stofur og Framleiðsla
 app.get('/api/stofur', (req, res) => {
-  const stofur = dbAll('SELECT * FROM auglysingar_stofur ORDER BY nafn');
-  res.json(stofur);
+  res.json(dbAll('SELECT * FROM auglysingar_stofur ORDER BY nafn'));
 });
 
-// Sækja texta úr Google Docs via API
-app.post('/api/google-docs/fetch', async (req, res) => {
-  const { url } = req.body;
+app.get('/api/framleidsla', (req, res) => {
+  res.json(dbAll('SELECT * FROM framleidsla ORDER BY nafn'));
+});
+
+// API - PDF
+app.get('/api/verkefni/:id/pdf', async (req, res) => {
+  const v = dbGet('SELECT * FROM verkefni WHERE id = ?', [req.params.id]);
+  if (!v) return res.status(404).send('Verkefni fannst ekki');
   
-  if (!url) {
-    return res.status(400).json({ error: 'URL vantar' });
-  }
-
-  const auth = getGoogleAuth();
-  if (!auth) {
-    return res.status(400).json({ error: 'Google Docs ekki tengt. Keyrðu: npm run auth' });
-  }
-
-  try {
-    // Finna doc ID úr URL
-    const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-    if (!match) {
-      return res.status(400).json({ error: 'Ógilt Google Docs URL' });
-    }
-    
-    const docId = match[1];
-    const docs = google.docs({ version: 'v1', auth });
-    
-    const doc = await docs.documents.get({ documentId: docId });
-    
-    // Extracta texta úr document
-    let text = '';
-    const content = doc.data.body.content;
-    
-    for (const element of content) {
-      if (element.paragraph) {
-        for (const textRun of element.paragraph.elements) {
-          if (textRun.textRun && textRun.textRun.content) {
-            text += textRun.textRun.content;
-          }
-        }
-      }
-    }
-    
-    res.json({ text: text.trim(), docId, title: doc.data.title });
-    
-  } catch (error) {
-    console.error('Google Docs villa:', error.message);
-    if (error.code === 404) {
-      res.status(404).json({ error: 'Skjal fannst ekki' });
-    } else if (error.code === 403) {
-      res.status(403).json({ error: 'Ekki aðgangur að skjali' });
-    } else {
-      res.status(500).json({ error: 'Villa við að sækja skjal' });
-    }
-  }
+  const timi = dbAll('SELECT * FROM timaskraning WHERE verkefni_id = ? ORDER BY dagsetning', [req.params.id]);
+  const totalMin = timi.filter(t => t.tegund === 'timi').reduce((s, t) => s + (t.timi_minutur || 0), 0);
+  const totalSimtol = timi.filter(t => t.tegund === 'simtal').length;
+  const totalEmail = timi.filter(t => t.tegund === 'email').length;
+  const totalFundir = timi.filter(t => t.tegund === 'fundur').length;
+  
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Tímaskýrsla - ${v.nafn}</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 40px; color: #333; }
+    h1 { color: #f5a623; border-bottom: 2px solid #f5a623; padding-bottom: 10px; }
+    h2 { color: #555; margin-top: 30px; }
+    .info { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 20px 0; }
+    .info-item { padding: 8px; background: #f5f5f5; border-radius: 4px; }
+    .info-label { font-weight: bold; color: #666; font-size: 12px; }
+    table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+    th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+    th { background: #f5a623; color: #000; }
+    .totals { display: flex; gap: 30px; padding: 20px; background: #f9f9f9; border-radius: 8px; margin-top: 30px; }
+    .total-item { text-align: center; }
+    .total-value { font-size: 24px; font-weight: bold; color: #f5a623; }
+    .total-label { font-size: 12px; color: #666; }
+    .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #999; text-align: center; }
+  </style>
+</head>
+<body>
+  <h1>Tímaskýrsla</h1>
+  <h2>${v.nafn}</h2>
+  
+  <div class="info">
+    <div class="info-item"><div class="info-label">Lesari</div>${v.lesari || '—'}</div>
+    <div class="info-item"><div class="info-label">Staða</div>${v.stada}</div>
+    <div class="info-item"><div class="info-label">Framleiðsla</div>${v.framleidsla || '—'}</div>
+    <div class="info-item"><div class="info-label">Pródúser</div>${v.produser || '—'}</div>
+    <div class="info-item"><div class="info-label">Auglýsingastofa</div>${v.stofa || '—'}</div>
+    <div class="info-item"><div class="info-label">Tengiliður</div>${v.tengill_nafn || '—'}</div>
+    <div class="info-item"><div class="info-label">Móttekið</div>${v.mottekid || '—'}</div>
+    <div class="info-item"><div class="info-label">Skilað</div>${v.skilad || '—'}</div>
+  </div>
+  
+  <h2>Tímaskráningar</h2>
+  <table>
+    <tr><th>Dags.</th><th>Tegund</th><th>Lýsing</th><th>Tími</th></tr>
+    ${timi.map(t => `<tr><td>${t.dagsetning||'—'}</td><td>${t.tegund}</td><td>${t.titill||'—'}</td><td>${t.timi_minutur ? t.timi_minutur + ' mín' : '—'}</td></tr>`).join('')}
+  </table>
+  
+  <div class="totals">
+    <div class="total-item"><div class="total-value">${totalMin}</div><div class="total-label">mínútur</div></div>
+    <div class="total-item"><div class="total-value">${totalSimtol}</div><div class="total-label">símtöl</div></div>
+    <div class="total-item"><div class="total-value">${totalEmail}</div><div class="total-label">email</div></div>
+    <div class="total-item"><div class="total-value">${totalFundir}</div><div class="total-label">fundir</div></div>
+  </div>
+  
+  <div class="footer">Bessi - Audioland • ${new Date().toLocaleDateString('is-IS')}</div>
+</body>
+</html>`;
+  
+  res.setHeader('Content-Type', 'text/html');
+  res.send(html);
 });
 
-// Sækja Google Docs live (fyrir booth polling)
-app.get('/api/google-docs/live/:docId', async (req, res) => {
+// Google Docs API
+app.get('/api/google-doc/:docId', async (req, res) => {
   const auth = getGoogleAuth();
-  if (!auth) {
-    return res.status(400).json({ error: 'Google Docs ekki tengt' });
-  }
-
+  if (!auth) return res.status(401).json({ error: 'Google Auth ekki uppsett' });
   try {
     const docs = google.docs({ version: 'v1', auth });
     const doc = await docs.documents.get({ documentId: req.params.docId });
-    
     let text = '';
-    const content = doc.data.body.content;
-    
-    for (const element of content) {
-      if (element.paragraph) {
-        for (const textRun of element.paragraph.elements) {
-          if (textRun.textRun && textRun.textRun.content) {
-            text += textRun.textRun.content;
-          }
-        }
-      }
-    }
-    
-    res.json({ text: text.trim(), title: doc.data.title });
-    
-  } catch (error) {
+    doc.data.body?.content?.forEach(item => {
+      item.paragraph?.elements?.forEach(el => {
+        if (el.textRun?.content) text += el.textRun.content;
+      });
+    });
+    res.json({ title: doc.data.title, content: text.trim() });
+  } catch (err) {
+    console.error('Google Docs villa:', err);
     res.status(500).json({ error: 'Villa við að sækja skjal' });
   }
 });
 
-// Síður
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+// Senda í booth
+app.post('/api/booth/send', (req, res) => {
+  const { nafn, handrit, lesari, take } = req.body;
+  broadcastToBooth({ type: 'handrit', nafn, handrit, lesari, take: take || 1 });
+  res.json({ message: 'Sent í booth' });
 });
 
-app.get('/booth', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'booth.html'));
-});
+// Start
+const PORT = process.env.PORT || 3001;
 
-const PORT = process.env.PORT || 3000;
-
-// Byrja server eftir að database er tilbúinn
 initDatabase().then(() => {
   server.listen(PORT, () => {
-    console.log(`
-╔═══════════════════════════════════════════════════════╗
-║           AUDIOLAND VERKEFNASTJÓRNUN                  ║
-╠═══════════════════════════════════════════════════════╣
-║                                                       ║
-║   Stjórnborð:  http://localhost:${PORT}                 ║
-║   Booth:       http://localhost:${PORT}/booth           ║
-║                                                       ║
-║   Booth á öðru tæki:                                  ║
-║   http://[þín-ip]:${PORT}/booth                         ║
-║                                                       ║
-╚═══════════════════════════════════════════════════════╝
-    `);
+    console.log('🐕 Bessi keyrir á http://localhost:' + PORT);
   });
 }).catch(err => {
-  console.error('Villa við að ræsa database:', err);
+  console.error('Villa við database:', err);
+  process.exit(1);
 });

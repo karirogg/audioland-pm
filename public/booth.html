@@ -3,22 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Audioland - Booth</title>
+  <title>Bessi - Booth</title>
+  <link rel="icon" type="image/png" href="favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #333333;
-      --text: #ffffff;
-      --text-dim: #888888;
-      --accent: #ED1C24;
+      --bg: #ffffff;
+      --bg-header: #f8f8f8;
+      --text: #1a1a1a;
+      --text-dim: #666666;
+      --accent: #f5a623;
+      --border: #e0e0e0;
     }
 
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
       font-family: 'Libre Baskerville', Georgia, serif;
@@ -38,11 +37,10 @@
       align-items: center;
       text-align: center;
       padding: 2rem;
+      background: var(--bg);
     }
 
-    .standby.hidden {
-      display: none;
-    }
+    .standby.hidden { display: none; }
 
     .standby-logo {
       display: flex;
@@ -52,23 +50,7 @@
       margin-bottom: 2rem;
     }
 
-    .standby-logo svg {
-      width: 100px;
-      height: 60px;
-    }
-
-    .standby-logo svg path {
-      fill: none;
-      stroke: var(--accent);
-      stroke-width: 5;
-      stroke-linecap: round;
-    }
-
-    .standby-logo-text {
-      font-size: 3rem;
-      font-weight: 700;
-      color: var(--text);
-    }
+    .standby-logo img { height: 100px; }
 
     .standby-text {
       font-size: 1.5rem;
@@ -98,28 +80,23 @@
       overflow: hidden;
     }
 
-    .handrit-view.active {
-      display: flex;
-    }
+    .handrit-view.active { display: flex; }
 
     .handrit-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       padding: 1.5rem 3rem;
-      background: #2a2a2a;
+      background: var(--bg-header);
       border-bottom: 3px solid var(--accent);
     }
 
-    .header-left {
-      display: flex;
-      flex-direction: column;
-    }
+    .header-left { display: flex; flex-direction: column; }
 
     .verkefni-nafn {
       font-size: 1.2rem;
-      color: var(--text-dim);
-      font-weight: 400;
+      color: var(--text);
+      font-weight: 600;
       font-family: system-ui, sans-serif;
     }
 
@@ -132,7 +109,7 @@
 
     .take-display {
       background: var(--accent);
-      color: white;
+      color: #000;
       padding: 0.75rem 2rem;
       border-radius: 8px;
       font-size: 1.5rem;
@@ -148,9 +125,7 @@
       cursor: pointer;
     }
 
-    .handrit-content.mirrored {
-      transform: scaleX(-1);
-    }
+    .handrit-content.mirrored { transform: scaleX(-1); }
 
     .handrit-text {
       line-height: 2;
@@ -159,6 +134,11 @@
       margin: 0 auto;
       white-space: pre-wrap;
       font-size: 2.5rem;
+      color: var(--text);
+    }
+
+    .handrit-text.align-left {
+      text-align: left;
     }
 
     /* Miðjulína */
@@ -168,10 +148,10 @@
       left: 0;
       right: 0;
       height: 3px;
-      background: rgba(0, 0, 0, 0.6);
+      background: rgba(0, 0, 0, 0.15);
       pointer-events: none;
       z-index: 5;
-      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
     }
 
     .center-line::before,
@@ -181,17 +161,16 @@
       left: 0;
       right: 0;
       height: 30px;
-      background: linear-gradient(to bottom, rgba(0,0,0,0.3), transparent);
     }
 
     .center-line::before {
       bottom: 100%;
-      background: linear-gradient(to top, rgba(0,0,0,0.3), transparent);
+      background: linear-gradient(to top, rgba(0,0,0,0.08), transparent);
     }
 
     .center-line::after {
       top: 100%;
-      background: linear-gradient(to bottom, rgba(0,0,0,0.3), transparent);
+      background: linear-gradient(to bottom, rgba(0,0,0,0.08), transparent);
     }
 
     /* Leturstærðir */
@@ -207,7 +186,7 @@
       bottom: 80px;
       right: 2rem;
       background: var(--accent);
-      color: white;
+      color: #000;
       padding: 0.5rem 1rem;
       border-radius: 20px;
       font-family: system-ui, sans-serif;
@@ -215,18 +194,16 @@
       animation: blink 1s ease-in-out infinite;
     }
 
-    .scroll-indicator.active {
-      display: block;
-    }
+    .scroll-indicator.active { display: block; }
 
     @keyframes blink {
       0%, 100% { opacity: 1; }
       50% { opacity: 0.5; }
     }
 
-    /* Status bar - alltaf sýnileg */
+    /* Status bar */
     .status-bar {
-      background: #1a1a1a;
+      background: var(--bg-header);
       padding: 1rem 2rem;
       display: flex;
       justify-content: space-between;
@@ -234,7 +211,7 @@
       font-family: system-ui, sans-serif;
       font-size: 1rem;
       color: var(--text-dim);
-      border-top: 1px solid #444;
+      border-top: 1px solid var(--border);
     }
 
     .connection-status {
@@ -250,9 +227,7 @@
       background: #ef4444;
     }
 
-    .status-dot.connected {
-      background: #22c55e;
-    }
+    .status-dot.connected { background: #22c55e; }
 
     .status-controls {
       display: flex;
@@ -261,8 +236,8 @@
     }
 
     .status-controls button {
-      background: #444;
-      border: 2px solid #555;
+      background: #fff;
+      border: 1px solid var(--border);
       color: var(--text);
       padding: 0.6rem 1.2rem;
       border-radius: 6px;
@@ -274,18 +249,18 @@
     }
 
     .status-controls button:hover {
-      background: #555;
-      border-color: #666;
+      background: var(--bg-header);
+      border-color: var(--accent);
     }
 
     .status-controls button.active {
       background: var(--accent);
       border-color: var(--accent);
-      color: white;
+      color: #000;
     }
 
     .separator {
-      color: #555;
+      color: var(--border);
       font-size: 1.5rem;
     }
 
@@ -293,7 +268,8 @@
       display: flex;
       align-items: center;
       gap: 0.3rem;
-      background: #2a2a2a;
+      background: #fff;
+      border: 1px solid var(--border);
       border-radius: 6px;
       padding: 0.2rem;
     }
@@ -307,6 +283,7 @@
       justify-content: center;
       font-size: 1.2rem;
       font-weight: bold;
+      border: none;
     }
 
     .speed-control span {
@@ -315,17 +292,13 @@
       font-weight: 600;
       color: var(--text);
     }
-
   </style>
 </head>
 <body>
   <!-- Bíðskjár -->
   <div class="standby" id="standby">
     <div class="standby-logo">
-      <svg viewBox="0 0 50 30">
-        <path d="M2 20 Q8 20 12 8 Q16 -4 20 15 Q24 34 28 15 Q32 -4 36 8 Q40 20 48 20"/>
-      </svg>
-      <span class="standby-logo-text">Audioland</span>
+      <img src="AppLogo.png" alt="Bessi">
     </div>
     <div class="standby-text">Bíð eftir handriti...</div>
     <div class="pulse"></div>
@@ -345,21 +318,23 @@
     </div>
   </div>
 
-  <div class="scroll-indicator" id="scrollIndicator">▼ AUTOSCROLL</div>
+  <div class="scroll-indicator" id="scrollIndicator">▼ Autoscroll</div>
 
-  <!-- Status bar - alltaf sýnileg -->
+  <!-- Status bar -->
   <div class="status-bar">
     <div class="connection-status">
       <div class="status-dot" id="statusDot"></div>
       <span id="statusText">Tengist...</span>
     </div>
     <div class="status-controls">
-      <button onclick="setFontSize(1)" id="fontBtn1">A</button>
-      <button onclick="setFontSize(2)" id="fontBtn2" class="active">A+</button>
-      <button onclick="setFontSize(3)" id="fontBtn3">A++</button>
-      <button onclick="setFontSize(4)" id="fontBtn4">A+++</button>
+      <button id="fontBtn1" onclick="setFontSize(1)">A</button>
+      <button id="fontBtn2" onclick="setFontSize(2)" class="active">A</button>
+      <button id="fontBtn3" onclick="setFontSize(3)">A</button>
+      <button id="fontBtn4" onclick="setFontSize(4)">A</button>
       <span class="separator">|</span>
-      <button onclick="toggleAutoScroll()" id="autoScrollBtn">▶ Scroll</button>
+      <button id="alignBtn" onclick="toggleAlign()">≡ Miðja</button>
+      <span class="separator">|</span>
+      <button id="autoScrollBtn" onclick="toggleAutoScroll()">▼ Scroll</button>
       <div class="speed-control">
         <button onclick="changeSpeed(-5)">−</button>
         <span id="speedDisplay">50</span>
@@ -378,7 +353,7 @@
     </div>
   </div>
 
-  <!-- Miðjulína fyrir teleprompter -->
+  <!-- Miðjulína -->
   <div class="center-line" id="centerLine" style="display: none;"></div>
 
   <script>
@@ -390,6 +365,7 @@
     let scrollSpeed = 50;
     let googleDocId = null;
     let googleDocPollInterval = null;
+    let isLeftAligned = false;
 
     function connect() {
       const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -418,9 +394,7 @@
         }
       };
 
-      ws.onerror = (err) => {
-        console.error('WebSocket villa:', err);
-      };
+      ws.onerror = (err) => console.error('WebSocket villa:', err);
 
       ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
@@ -434,10 +408,7 @@
           showHandrit(data);
           break;
         case 'state':
-          // Initial state frá server
-          if (data.handrit) {
-            showHandrit(data);
-          }
+          if (data.handrit) showHandrit(data);
           if (data.fontSize) setFontSize(data.fontSize, false);
           if (data.autoScroll) {
             autoScrollActive = true;
@@ -475,8 +446,6 @@
     }
 
     function showHandrit(data) {
-      console.log('showHandrit móttek:', data);
-      
       document.getElementById('standby').classList.add('hidden');
       document.getElementById('handritView').classList.add('active');
       document.getElementById('centerLine').style.display = 'block';
@@ -485,12 +454,10 @@
       document.getElementById('handritText').textContent = data.handrit || '';
       document.getElementById('lesariNafn').textContent = data.lesari ? `Lesari: ${data.lesari}` : '';
 
-      // Take
       currentTake = data.take || 1;
       document.getElementById('takeNumber').textContent = currentTake;
       document.getElementById('takeDisplay').textContent = currentTake;
 
-      // Default font size
       setFontSize(data.fontSize || 2);
       
       if (data.autoScroll) {
@@ -498,46 +465,30 @@
         startAutoScroll();
       }
 
-      // Google Docs live polling
-      console.log('googleDocId:', data.googleDocId);
       if (data.googleDocId) {
-        googleDocId = data.googleDocId;  // Setja FYRST
-        startGoogleDocPolling();          // SVO starta polling
+        googleDocId = data.googleDocId;
+        startGoogleDocPolling();
       } else {
         googleDocId = null;
         stopGoogleDocPolling();
       }
 
-      // Byrja efst
       scrollToTop();
     }
 
     function startGoogleDocPolling() {
       stopGoogleDocPolling();
+      const docId = googleDocId;
+      if (!docId) return;
       
-      const docId = googleDocId;  // Geyma local copy
-      console.log('Byrja Google Docs polling fyrir:', docId);
-      
-      if (!docId) {
-        console.log('Ekkert docId, hætti');
-        return;
-      }
-      
-      // Poll á 3 sekúndna fresti
       googleDocPollInterval = setInterval(async () => {
-        console.log('Sæki Google Doc...');
-        
         try {
           const res = await fetch(`/api/google-docs/live/${docId}`);
           const data = await res.json();
-          
-          console.log('Fékk svar:', data);
-          
           if (data.text) {
             const currentText = document.getElementById('handritText').textContent;
             if (data.text !== currentText) {
               document.getElementById('handritText').textContent = data.text;
-              console.log('Handrit uppfært frá Google Docs');
             }
           }
         } catch (err) {
@@ -551,7 +502,6 @@
         clearInterval(googleDocPollInterval);
         googleDocPollInterval = null;
       }
-      // Ekki setja googleDocId = null hér
     }
 
     function updateTake(take) {
@@ -570,12 +520,28 @@
       currentFontSize = size;
       const content = document.getElementById('handritContent');
       content.className = 'handrit-content font-size-' + size;
+      if (isLeftAligned) content.querySelector('.handrit-text').classList.add('align-left');
 
-      // Update takkar
       for (let i = 1; i <= 4; i++) {
         document.getElementById('fontBtn' + i).classList.remove('active');
       }
       document.getElementById('fontBtn' + size).classList.add('active');
+    }
+
+    function toggleAlign() {
+      isLeftAligned = !isLeftAligned;
+      const text = document.getElementById('handritText');
+      const btn = document.getElementById('alignBtn');
+      
+      if (isLeftAligned) {
+        text.classList.add('align-left');
+        btn.textContent = '≡ Vinstri';
+        btn.classList.add('active');
+      } else {
+        text.classList.remove('align-left');
+        btn.textContent = '≡ Miðja';
+        btn.classList.remove('active');
+      }
     }
 
     function toggleAutoScroll() {
@@ -594,13 +560,10 @@
       if (autoScrollInterval) clearInterval(autoScrollInterval);
       
       const content = document.getElementById('handritContent');
-      // Hraðari scroll: lægri tala = hraðara interval
       const interval = Math.max(5, 150 - scrollSpeed);
       
       autoScrollInterval = setInterval(() => {
         content.scrollTop += 1;
-        
-        // Stoppa ef komið niður
         if (content.scrollTop >= content.scrollHeight - content.clientHeight) {
           stopAutoScroll();
         }
@@ -626,7 +589,6 @@
       scrollSpeed = Math.max(10, Math.min(300, scrollSpeed + delta));
       document.getElementById('speedDisplay').textContent = scrollSpeed;
       
-      // Ef autoscroll er í gangi, restarta með nýjum hraða
       if (autoScrollActive) {
         stopAutoScroll();
         startAutoScroll();
@@ -664,7 +626,6 @@
       }
     }
 
-    // Upphaf
     connect();
   </script>
 </body>
