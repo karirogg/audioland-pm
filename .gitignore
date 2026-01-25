@@ -1,0 +1,17 @@
+# Google API credentials - ALDREI pusha þessu
+credentials.json
+token.json
+
+# Database
+*.db
+
+# Node modules
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*

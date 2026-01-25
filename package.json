@@ -1,0 +1,17 @@
+{
+  "name": "audioland-verkefni",
+  "version": "1.0.0",
+  "description": "Verkefnastjórnun fyrir Audioland með booth-view",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "auth": "node google-auth.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "sql.js": "^1.10.0",
+    "ws": "^8.16.0",
+    "googleapis": "^128.0.0",
+    "open": "^8.4.2"
+  }
+}
