@@ -110,6 +110,20 @@ async function initDatabase() {
     )
   `);
 
+  // Aðkeypt tónlist
+  db.run(`
+    CREATE TABLE IF NOT EXISTS adkeypt (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      verkefni_id INTEGER NOT NULL,
+      titill TEXT,
+      heimild TEXT,
+      url TEXT,
+      kostnadur INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (verkefni_id) REFERENCES verkefni(id)
+    )
+  `);
+
   // Insert nokkrar auglýsingastofur sem dæmi
   const stofur = ['Pipar TBWA', 'Íslenska', 'Brandenburg', 'Hvíta húsið', "Jónsson & Le'macks", 'Mannvit', 'Sahara'];
   stofur.forEach(stofa => {

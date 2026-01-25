@@ -91,7 +91,12 @@ function dbRun(sql, params = []) {
 
 // API - Verkefni
 app.get('/api/verkefni', (req, res) => {
-  const verkefni = dbAll('SELECT * FROM verkefni ORDER BY created_at DESC');
+  const verkefni = dbAll(`
+    SELECT v.*, 
+      COALESCE((SELECT SUM(timi_minutur) FROM timaskraning WHERE verkefni_id = v.id AND tegund = 'timi'), 0) as total_minutes
+    FROM verkefni v 
+    ORDER BY v.created_at DESC
+  `);
   res.json(verkefni);
 });
 
@@ -196,16 +201,39 @@ app.get('/api/framleidsla', (req, res) => {
   res.json(dbAll('SELECT * FROM framleidsla ORDER BY nafn'));
 });
 
+// API - Aðkeypt tónlist
+app.get('/api/verkefni/:id/adkeypt', (req, res) => {
+  const adkeypt = dbAll('SELECT * FROM adkeypt WHERE verkefni_id = ? ORDER BY created_at DESC', [req.params.id]);
+  res.json(adkeypt);
+});
+
+app.post('/api/verkefni/:id/adkeypt', (req, res) => {
+  const { titill, heimild, url, kostnadur } = req.body;
+  const result = dbRun(`
+    INSERT INTO adkeypt (verkefni_id, titill, heimild, url, kostnadur)
+    VALUES (?, ?, ?, ?, ?)
+  `, [req.params.id, titill||'', heimild||'', url||'', kostnadur||0]);
+  res.json({ id: result.lastInsertRowid, message: 'Lagi bætt við' });
+});
+
+app.delete('/api/adkeypt/:id', (req, res) => {
+  dbRun('DELETE FROM adkeypt WHERE id = ?', [req.params.id]);
+  res.json({ message: 'Lagi eytt' });
+});
+
 // API - PDF
 app.get('/api/verkefni/:id/pdf', async (req, res) => {
   const v = dbGet('SELECT * FROM verkefni WHERE id = ?', [req.params.id]);
   if (!v) return res.status(404).send('Verkefni fannst ekki');
   
   const timi = dbAll('SELECT * FROM timaskraning WHERE verkefni_id = ? ORDER BY dagsetning', [req.params.id]);
+  const adkeypt = dbAll('SELECT * FROM adkeypt WHERE verkefni_id = ? ORDER BY created_at', [req.params.id]);
+  
   const totalMin = timi.filter(t => t.tegund === 'timi').reduce((s, t) => s + (t.timi_minutur || 0), 0);
   const totalSimtol = timi.filter(t => t.tegund === 'simtal').length;
   const totalEmail = timi.filter(t => t.tegund === 'email').length;
   const totalFundir = timi.filter(t => t.tegund === 'fundur').length;
+  const totalAdkeypt = adkeypt.reduce((s, a) => s + (a.kostnadur || 0), 0);
   
   const html = `
 <!DOCTYPE html>
@@ -227,6 +255,7 @@ app.get('/api/verkefni/:id/pdf', async (req, res) => {
     .total-item { text-align: center; }
     .total-value { font-size: 24px; font-weight: bold; color: #f5a623; }
     .total-label { font-size: 12px; color: #666; }
+    .cost-total { text-align: right; font-size: 18px; font-weight: bold; padding: 10px; background: #f5a623; color: #000; border-radius: 4px; margin-top: 10px; }
     .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #999; text-align: center; }
   </style>
 </head>
@@ -258,6 +287,15 @@ app.get('/api/verkefni/:id/pdf', async (req, res) => {
     <div class="total-item"><div class="total-value">${totalFundir}</div><div class="total-label">fundir</div></div>
   </div>
   
+  ${adkeypt.length > 0 ? `
+  <h2>Aðkeypt tónlist</h2>
+  <table>
+    <tr><th>Titill</th><th>Heimild</th><th style="text-align:right;">Kostnaður</th></tr>
+    ${adkeypt.map(a => `<tr><td>${a.titill||'—'}</td><td>${a.heimild||'—'}</td><td style="text-align:right;">${a.kostnadur ? a.kostnadur.toLocaleString('is-IS') + ' kr' : '—'}</td></tr>`).join('')}
+  </table>
+  <div class="cost-total">Samtals aðkeypt: ${totalAdkeypt.toLocaleString('is-IS')} kr</div>
+  ` : ''}
+  
   <div class="footer">Bessi - Audioland • ${new Date().toLocaleDateString('is-IS')}</div>
 </body>
 </html>`;
@@ -271,18 +309,18 @@ app.get('/api/google-doc/:docId', async (req, res) => {
   const auth = getGoogleAuth();
   if (!auth) return res.status(401).json({ error: 'Google Auth ekki uppsett' });
   try {
-    const docs = google.docs({ version: 'v1', auth });
-    const doc = await docs.documents.get({ documentId: req.params.docId });
-    let text = '';
-    doc.data.body?.content?.forEach(item => {
-      item.paragraph?.elements?.forEach(el => {
-        if (el.textRun?.content) text += el.textRun.content;
-      });
+    const drive = google.drive({ version: 'v3', auth });
+    
+    // Sækja skjal sem plain text
+    const response = await drive.files.export({
+      fileId: req.params.docId,
+      mimeType: 'text/plain'
     });
-    res.json({ title: doc.data.title, content: text.trim() });
+    
+    res.json({ content: response.data });
   } catch (err) {
-    console.error('Google Docs villa:', err);
-    res.status(500).json({ error: 'Villa við að sækja skjal' });
+    console.error('Google Drive villa:', err.message);
+    res.status(500).json({ error: 'Villa við að sækja skjal: ' + err.message });
   }
 });
 
