@@ -183,7 +183,7 @@
                 <div class="form-group"><label>Staða</label><select id="stada"><option value="Í vinnslu">Í vinnslu</option><option value="Bíður">Bíður</option><option value="Lokið">Lokið</option></select></div>
               </div>
               <div class="form-row">
-                <div class="form-group"><label>Mynd</label><input type="file" id="mynd" accept="image/*"></div>
+                <div class="form-group"><label>Mynd</label><input type="file" id="mynd" accept="image/*" onchange="handleImageUpload(this)"><input type="hidden" id="myndBase64"><div id="myndPreview" style="margin-top:0.5rem;"></div></div>
                 <div class="form-group"><label>Lesari</label><input type="text" id="lesari" list="lesendurList"><datalist id="lesendurList"></datalist></div>
               </div>
               <div class="form-row">
@@ -381,6 +381,8 @@
       document.getElementById('sendaBoothBtn').style.display = 'none';
       document.getElementById('verkefniForm').reset();
       document.getElementById('verkefniId').value = '';
+      document.getElementById('myndBase64').value = '';
+      document.getElementById('myndPreview').innerHTML = '';
       tempTimaSkraningar = [];
       birtaTimaSkraningar();
       switchTab('grunnur');
@@ -404,9 +406,28 @@
           if (el) el.value = v[f] || '';
         });
         
+        // Sýna mynd ef til
+        document.getElementById('myndBase64').value = v.mynd || '';
+        if (v.mynd) {
+          document.getElementById('myndPreview').innerHTML = '<img src="' + v.mynd + '" style="max-width:150px;max-height:100px;border-radius:8px;">';
+        } else {
+          document.getElementById('myndPreview').innerHTML = '';
+        }
+        
         await saekjaTimaskraningar(v.id);
         switchTab('grunnur');
       } catch (err) { console.error(err); }
+    }
+
+    function handleImageUpload(input) {
+      if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          document.getElementById('myndBase64').value = e.target.result;
+          document.getElementById('myndPreview').innerHTML = '<img src="' + e.target.result + '" style="max-width:150px;max-height:100px;border-radius:8px;">';
+        };
+        reader.readAsDataURL(input.files[0]);
+      }
     }
 
     async function vistaVerkefni() {
@@ -417,12 +438,28 @@
         if (el) data[f] = el.value;
       });
       
+      // Bæta við mynd ef valin
+      const myndBase64 = document.getElementById('myndBase64').value;
+      if (myndBase64) data.mynd = myndBase64;
+      
       try {
-        await fetch(id ? '/api/verkefni/' + id : '/api/verkefni', {
+        const url = id ? '/api/verkefni/' + id : '/api/verkefni';
+        const res = await fetch(url, {
           method: id ? 'PUT' : 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
         });
+        const result = await res.json();
+        
+        // Ef ný mynd og nýtt verkefni, vista mynd sér
+        if (myndBase64 && !id && result.id) {
+          await fetch('/api/verkefni/' + result.id + '/mynd', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mynd: myndBase64 })
+          });
+        }
+        
         lokaModal();
         saekjaVerkefni();
       } catch (err) { console.error(err); alert('Villa við vistun'); }

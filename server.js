@@ -10,7 +10,7 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Google Docs setup
@@ -124,6 +124,15 @@ app.post('/api/verkefni', (req, res) => {
     b.stada||'Í vinnslu', b.athugasemdir||'', b.payday_tengill||'', b.dropbox_slod||'', b.mottekid||'', b.skilad||''
   ]);
   res.json({ id: result.lastInsertRowid, message: 'Verkefni búið til' });
+});
+
+// Mynd upload - base64
+app.post('/api/verkefni/:id/mynd', express.json({ limit: '10mb' }), (req, res) => {
+  const { mynd } = req.body;
+  if (!mynd) return res.status(400).json({ error: 'Enga mynd' });
+  
+  dbRun('UPDATE verkefni SET mynd = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', [mynd, req.params.id]);
+  res.json({ message: 'Mynd vistuð' });
 });
 
 app.put('/api/verkefni/:id', (req, res) => {
