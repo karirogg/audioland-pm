@@ -364,11 +364,14 @@
         const config = await configRes.json();
         useAbly = config.useAbly;
 
-        if (!useAbly) {
+        if (useAbly) {
+          // Production: use HTTP POST (no persistent connection needed)
+          console.log('Using Ably mode - dashboard will use HTTP POST to send to booth');
+        } else {
           // Development: use WebSocket
+          console.log('Using WebSocket mode for development');
           connectWS();
         }
-        // Production with Ably: no WebSocket needed, we'll use HTTP POST
       } catch (err) {
         console.error('Config fetch failed, using WebSocket:', err);
         connectWS();

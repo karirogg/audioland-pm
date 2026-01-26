@@ -60,16 +60,20 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Broadcast to booth - works in both dev (WebSocket) and prod (Ably)
-function broadcastToBooth(data) {
+async function broadcastToBooth(data) {
   if (data.type === 'handrit' || data.type === 'settings') {
     currentBoothState = { ...currentBoothState, ...data };
   }
 
   if (isProduction && boothChannel) {
-    // Production: publish to Ably
-    boothChannel.publish('message', data, (err) => {
-      if (err) console.error('Ably publish error:', err);
-    });
+    // Production: publish to Ably (must await for serverless!)
+    try {
+      await boothChannel.publish('message', data);
+      console.log('Ably publish success');
+    } catch (err) {
+      console.error('Ably publish error:', err);
+      throw err;
+    }
   } else {
     // Development: use WebSocket
     boothClients.forEach(c => { if (c.readyState === 1) c.send(JSON.stringify(data)); });
@@ -435,10 +439,15 @@ app.get('/api/config', (req, res) => {
 });
 
 // Senda í booth
-app.post('/api/booth/send', (req, res) => {
+app.post('/api/booth/send', async (req, res) => {
   const { nafn, handrit, lesari, take, googleDocId } = req.body;
-  broadcastToBooth({ type: 'handrit', nafn, handrit, lesari, googleDocId, take: take || 1 });
-  res.json({ message: 'Sent í booth' });
+  try {
+    await broadcastToBooth({ type: 'handrit', nafn, handrit, lesari, googleDocId, take: take || 1 });
+    res.json({ message: 'Sent í booth' });
+  } catch (err) {
+    console.error('Booth send error:', err);
+    res.status(500).json({ error: 'Failed to send to booth' });
+  }
 });
 
 // Start
