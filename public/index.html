@@ -148,6 +148,15 @@
         color: var(--text);
         background: var(--bg-card);
       }
+      .btn-danger {
+        background: transparent;
+        color: var(--danger);
+        border: 1px solid var(--danger);
+      }
+      .btn-danger:hover {
+        background: var(--danger);
+        color: #fff;
+      }
       .btn-small {
         padding: 0.4rem 0.8rem;
         font-size: 0.8rem;
@@ -193,10 +202,97 @@
         color: #000;
       }
 
+      .view-toggle {
+        display: flex;
+        gap: 0.25rem;
+        margin-left: auto;
+      }
+      .view-btn {
+        padding: 0.5rem 0.75rem;
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--text-dim);
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+      .view-btn:first-child {
+        border-radius: 6px 0 0 6px;
+      }
+      .view-btn:last-child {
+        border-radius: 0 6px 6px 0;
+      }
+      .view-btn.active {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #000;
+      }
+
       .grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
         gap: 1.5rem;
+      }
+      .grid.list-view {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+      }
+      .grid.list-view .card {
+        display: flex;
+        align-items: center;
+        border-radius: 8px;
+        border-left-width: 3px;
+      }
+      .grid.list-view .card:hover {
+        transform: none;
+        box-shadow: 0 2px 8px var(--shadow);
+      }
+      .grid.list-view .card-image {
+        width: 60px;
+        height: 60px;
+        aspect-ratio: 1;
+        flex-shrink: 0;
+        border-radius: 6px;
+        margin: 0.5rem;
+      }
+      .grid.list-view .card-image .status-badge {
+        display: none;
+      }
+      .grid.list-view .card-content {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.75rem 1rem;
+      }
+      .grid.list-view .card-title {
+        min-width: 200px;
+        font-size: 0.95rem;
+      }
+      .grid.list-view .card-subtitle {
+        min-width: 150px;
+        margin: 0;
+        font-size: 0.85rem;
+      }
+      .grid.list-view .card-meta {
+        flex: 1;
+        font-size: 0.85rem;
+      }
+      .grid.list-view .list-status {
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+      .grid.list-view .card-booth-btn {
+        position: static;
+        opacity: 0;
+        margin-left: 0.5rem;
+      }
+      .grid.list-view .card:hover .card-booth-btn {
+        opacity: 1;
       }
 
       .card {
@@ -770,6 +866,10 @@
         <button class="filter-btn" data-filter="Í vinnslu">Í vinnslu</button>
         <button class="filter-btn" data-filter="Bíður">Bíður</button>
         <button class="filter-btn" data-filter="Lokið">Lokið</button>
+        <div class="view-toggle">
+          <button class="view-btn active" onclick="setView('grid')" title="Spjöld">▦</button>
+          <button class="view-btn" onclick="setView('list')" title="Listi">☰</button>
+        </div>
       </div>
       <div class="grid" id="verkefniGrid"></div>
       <div class="empty-state" id="emptyState" style="display: none">
@@ -1164,6 +1264,15 @@
           <div class="modal-footer-right">
             <button
               type="button"
+              class="btn btn-danger"
+              id="eydaBtn"
+              style="display: none"
+              onclick="eydaVerkefni()"
+            >
+              🗑️ Eyða
+            </button>
+            <button
+              type="button"
               class="btn btn-secondary"
               id="sendaBoothBtn"
               style="display: none"
@@ -1185,6 +1294,7 @@
     <script>
       let verkefni = [];
       let currentFilter = "all";
+      let currentView = "grid";
       let currentTimeType = "timi";
       let tempTimaSkraningar = [];
       let tempAdkeypt = [];
@@ -1301,6 +1411,20 @@
                   tpiMIn +
                   " mín</span>"
                 : '<span class="card-time">⏱️ 0 mín</span>';
+            if (currentView === 'list') {
+              return (
+                '<div class="card ' + stadaClass + '" onclick="opnaVerkefni(' + v.id + ')">' +
+                '<div class="card-image">' +
+                (v.mynd ? '<img src="' + v.mynd + '">' : '<img class="placeholder" src="AppLogo.png" alt="">') +
+                '</div><div class="card-content">' +
+                '<div class="card-title">' + v.nafn + '</div>' +
+                '<div class="card-subtitle">' + (v.lesari || "—") + '</div>' +
+                '<div class="card-meta"><div>' + (v.stofa || "—") + '</div>' + timeDisplay + '</div>' +
+                '<span class="list-status status-badge ' + badgeClass + '">' + v.stada + '</span>' +
+                '<button class="card-booth-btn" onclick="sendaTilBooth(event, ' + v.id + ')" title="Senda í Booth">🎙️</button>' +
+                '</div></div>'
+              );
+            }
             return (
               '<div class="card ' +
               stadaClass +
@@ -1333,6 +1457,20 @@
         return new Date(date).toLocaleDateString("is-IS");
       }
 
+      function setView(view) {
+        currentView = view;
+        document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector('.view-btn[onclick="setView(\'' + view + '\')"]').classList.add('active');
+
+        const grid = document.getElementById('verkefniGrid');
+        if (view === 'list') {
+          grid.classList.add('list-view');
+        } else {
+          grid.classList.remove('list-view');
+        }
+        birtaVerkefni();
+      }
+
       async function nyttVerkefni() {
         // Búa til tómt verkefni í database
         try {
@@ -1347,6 +1485,7 @@
           document.getElementById("modalOverlay").classList.add("active");
           document.getElementById("modalTitle").textContent = "Nýtt verkefni";
           document.getElementById("sendaBoothBtn").style.display = "none";
+          document.getElementById("eydaBtn").style.display = "none";
           document.getElementById("verkefniForm").reset();
           document.getElementById("verkefniId").value = currentVerkefniId;
           document.getElementById("nafn").value = "Nýtt verkefni";
@@ -1381,6 +1520,29 @@
         saekjaVerkefni();
       }
 
+      async function eydaVerkefni() {
+        if (!currentVerkefniId) return;
+
+        const nafn = document.getElementById("nafn").value || "þetta verkefni";
+        if (!confirm('Ertu viss um að þú viljir eyða "' + nafn + '"?\n\nÞetta er ekki hægt að afturkalla.')) {
+          return;
+        }
+
+        try {
+          const res = await fetch("/api/verkefni/" + currentVerkefniId, {
+            method: "DELETE",
+          });
+          if (res.ok) {
+            lokaModal();
+          } else {
+            alert("Villa við að eyða verkefni");
+          }
+        } catch (err) {
+          console.error(err);
+          alert("Villa við að eyða verkefni");
+        }
+      }
+
       async function opnaVerkefni(id) {
         try {
           const res = await fetch("/api/verkefni/" + id);
@@ -1390,8 +1552,8 @@
           document.getElementById("modalOverlay").classList.add("active");
           document.getElementById("modalTitle").textContent =
             v.nafn || "Verkefni";
-          document.getElementById("sendaBoothBtn").style.display =
-            "inline-flex";
+          document.getElementById("sendaBoothBtn").style.display = "inline-flex";
+          document.getElementById("eydaBtn").style.display = "inline-flex";
           document.getElementById("saveStatus").textContent = "";
 
           document.getElementById("verkefniId").value = v.id;

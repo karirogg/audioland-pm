@@ -301,10 +301,9 @@ app.put("/api/verkefni/:id", async (req, res) => {
 
 app.delete("/api/verkefni/:id", async (req, res) => {
   try {
+    await dbRun("DELETE FROM timaskraning WHERE verkefni_id = ?", [req.params.id]);
+    await dbRun("DELETE FROM adkeypt WHERE verkefni_id = ?", [req.params.id]);
     await dbRun("DELETE FROM verkefni WHERE id = ?", [req.params.id]);
-    await dbRun("DELETE FROM timaskraning WHERE verkefni_id = ?", [
-      req.params.id,
-    ]);
     res.json({ message: "Verkefni eytt" });
   } catch (err) {
     res.status(500).json({ error: err.message });
