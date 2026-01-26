@@ -142,7 +142,7 @@ async function initTursoDatabase() {
 async function initSqliteDatabase() {
   const initSqlJs = require("sql.js");
   const SQL = await initSqlJs({
-    locateFile: (file) => `https://sql.js.org/dist/${file}`,
+    locateFile: (file) => path.join(__dirname, "node_modules", "sql.js", "dist", file),
   });
 
   if (fs.existsSync(DB_PATH)) {
