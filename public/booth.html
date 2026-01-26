@@ -431,6 +431,7 @@
       <button onclick="toggleMirror()" id="mirrorBtn">⟷ Mirror</button>
       <button onclick="scrollToTop()">↑ Efst</button>
       <button onclick="toggleDarkMode()" id="darkModeBtn">☀ Ljóst</button>
+      <button onclick="fetchBoothState()" id="refreshBtn" title="Sækja handrit">🔄</button>
       <button onclick="toggleFullscreen()">⛶</button>
     </div>
   </div>
@@ -818,6 +819,25 @@
         btn.textContent = '☀ Ljóst';
         btn.classList.remove('active');
       }
+    }
+
+    async function fetchBoothState() {
+      const btn = document.getElementById('refreshBtn');
+      btn.textContent = '⏳';
+      try {
+        const res = await fetch('/api/booth/state');
+        const state = await res.json();
+        if (state.handrit) {
+          handleMessage({ type: 'state', ...state });
+          btn.textContent = '✓';
+        } else {
+          btn.textContent = '—';
+        }
+      } catch (err) {
+        console.error('Villa við að sækja state:', err);
+        btn.textContent = '✗';
+      }
+      setTimeout(() => { btn.textContent = '🔄'; }, 1500);
     }
 
     initDarkMode();
