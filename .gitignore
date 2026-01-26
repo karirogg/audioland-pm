@@ -1,6 +1,6 @@
 # Google API credentials - ALDREI pusha þessu
-credentials.json
-token.json
+credentials*.json
+token*.json
 
 # Environment variables
 .env

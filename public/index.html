@@ -341,6 +341,7 @@
         <div class="modal-footer-right">
           <button type="button" class="btn btn-secondary" id="sendaBoothBtn" style="display: none;" onclick="sendaIBooth()">📺 Senda í Booth</button>
           <button type="button" class="btn btn-ghost" onclick="lokaModal()">Loka</button>
+          <button type="button" class="btn btn-primary" onclick="autosave()">Vista</button>
         </div>
       </div>
     </div>
@@ -576,8 +577,14 @@
       const nafn = document.getElementById('nafn').value;
       const handrit = document.getElementById('handrit').value;
       const lesari = document.getElementById('lesari').value;
+      const googleDocUrl = document.getElementById('google_doc_url').value;
+      let googleDocId = null;
+      if (googleDocUrl) {
+        const match = googleDocUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+        if (match) googleDocId = match[1];
+      }
       if (ws && ws.readyState === 1) {
-        ws.send(JSON.stringify({ type: 'handrit', nafn, handrit, lesari, take: 1 }));
+        ws.send(JSON.stringify({ type: 'handrit', nafn, handrit, lesari, googleDocId, take: 1 }));
         alert('Sent í booth!');
       }
     }

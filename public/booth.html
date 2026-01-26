@@ -483,12 +483,12 @@
       
       googleDocPollInterval = setInterval(async () => {
         try {
-          const res = await fetch(`/api/google-docs/live/${docId}`);
+          const res = await fetch(`/api/google-doc/${docId}`);
           const data = await res.json();
-          if (data.text) {
+          if (data.content) {
             const currentText = document.getElementById('handritText').textContent;
-            if (data.text !== currentText) {
-              document.getElementById('handritText').textContent = data.text;
+            if (data.content !== currentText) {
+              document.getElementById('handritText').textContent = data.content;
             }
           }
         } catch (err) {
