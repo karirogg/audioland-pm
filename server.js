@@ -586,6 +586,53 @@ app.post("/api/booth/send", async (req, res) => {
   }
 });
 
+// Search API - full text search in transcripts
+app.get("/api/search", async (req, res) => {
+  try {
+    const { q, lesari, stofa, stada, from, to } = req.query;
+
+    if (!q || q.trim().length < 2) {
+      return res.json([]);
+    }
+
+    const searchTerm = `%${q.trim()}%`;
+    let sql = `
+      SELECT id, nafn, lesari, stofa, stada, handrit, mottekid, skilad, created_at
+      FROM verkefni
+      WHERE handrit LIKE ?
+    `;
+    const params = [searchTerm];
+
+    if (lesari) {
+      sql += " AND lesari LIKE ?";
+      params.push(`%${lesari}%`);
+    }
+    if (stofa) {
+      sql += " AND stofa LIKE ?";
+      params.push(`%${stofa}%`);
+    }
+    if (stada) {
+      sql += " AND stada = ?";
+      params.push(stada);
+    }
+    if (from) {
+      sql += " AND (mottekid >= ? OR created_at >= ?)";
+      params.push(from, from);
+    }
+    if (to) {
+      sql += " AND (mottekid <= ? OR created_at <= ?)";
+      params.push(to, to);
+    }
+
+    sql += " ORDER BY created_at DESC LIMIT 100";
+
+    const results = await dbAll(sql, params);
+    res.json(results);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Start
 const PORT = process.env.PORT || 3001;
 
