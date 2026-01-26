@@ -322,6 +322,57 @@
       font-weight: 600;
       color: var(--text);
     }
+
+    /* Responsive - Mobile */
+    @media (max-width: 768px) {
+      .handrit-header {
+        padding: 1rem;
+        flex-direction: column;
+        gap: 0.5rem;
+        align-items: flex-start;
+      }
+      .verkefni-nafn {
+        font-size: 1rem;
+      }
+      .take-display {
+        padding: 0.5rem 1rem;
+        font-size: 1.2rem;
+      }
+
+      .handrit-content {
+        padding: 1.5rem 1rem;
+      }
+      .font-size-1 .handrit-text { font-size: 1.2rem; }
+      .font-size-2 .handrit-text { font-size: 1.5rem; }
+      .font-size-3 .handrit-text { font-size: 2rem; }
+      .font-size-4 .handrit-text { font-size: 2.5rem; }
+
+      .status-bar {
+        padding: 0.75rem;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+      .status-controls {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+      .status-controls button {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.85rem;
+      }
+      .separator {
+        display: none;
+      }
+      .speed-control {
+        order: 10;
+      }
+
+      .scroll-indicator {
+        bottom: 100px;
+        right: 1rem;
+        font-size: 0.8rem;
+      }
+    }
   </style>
 </head>
 <body>

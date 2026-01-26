@@ -369,6 +369,77 @@
       border: 1px solid var(--border);
       font-family: inherit;
     }
+
+    /* Responsive - Mobile */
+    @media (max-width: 768px) {
+      header {
+        padding: 0.5rem 1rem;
+      }
+      .logo img {
+        height: 28px;
+      }
+      .header-actions {
+        gap: 0.5rem;
+      }
+      .header-actions .btn {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8rem;
+      }
+
+      .container {
+        padding: 1rem;
+      }
+      .page-title {
+        font-size: 1.4rem;
+      }
+
+      .search-section {
+        padding: 1rem;
+      }
+      .search-main {
+        flex-direction: column;
+      }
+      .search-input {
+        font-size: 16px; /* Prevents zoom on iOS */
+      }
+      .search-btn {
+        width: 100%;
+      }
+
+      .filters {
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+      .filter-group {
+        width: 100%;
+      }
+      .filter-group input,
+      .filter-group select {
+        width: 100%;
+        min-width: auto;
+        font-size: 16px;
+      }
+
+      .keyboard-hint {
+        display: none;
+      }
+
+      .result-card {
+        padding: 1rem;
+      }
+      .result-header {
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+      .result-meta {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+      .result-excerpt {
+        font-size: 0.9rem;
+        max-height: 120px;
+      }
+    }
   </style>
 </head>
 <body>
