@@ -15,6 +15,17 @@
       --text-dim: #666666;
       --accent: #f5a623;
       --border: #e0e0e0;
+      --btn-bg: #fff;
+    }
+
+    [data-theme="dark"] {
+      --bg: #1a1a1a;
+      --bg-header: #252525;
+      --text: #f0f0f0;
+      --text-dim: #a0a0a0;
+      --accent: #f5a623;
+      --border: #404040;
+      --btn-bg: #333;
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -154,6 +165,11 @@
       box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
     }
 
+    [data-theme="dark"] .center-line {
+      background: rgba(255, 255, 255, 0.2);
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+    }
+
     .center-line::before,
     .center-line::after {
       content: '';
@@ -171,6 +187,14 @@
     .center-line::after {
       top: 100%;
       background: linear-gradient(to bottom, rgba(0,0,0,0.08), transparent);
+    }
+
+    [data-theme="dark"] .center-line::before {
+      background: linear-gradient(to top, rgba(255,255,255,0.08), transparent);
+    }
+
+    [data-theme="dark"] .center-line::after {
+      background: linear-gradient(to bottom, rgba(255,255,255,0.08), transparent);
     }
 
     /* Leturstærðir */
@@ -236,7 +260,7 @@
     }
 
     .status-controls button {
-      background: #fff;
+      background: var(--btn-bg);
       border: 1px solid var(--border);
       color: var(--text);
       padding: 0.6rem 1.2rem;
@@ -268,7 +292,7 @@
       display: flex;
       align-items: center;
       gap: 0.3rem;
-      background: #fff;
+      background: var(--btn-bg);
       border: 1px solid var(--border);
       border-radius: 6px;
       padding: 0.2rem;
@@ -349,6 +373,7 @@
       <span class="separator">|</span>
       <button onclick="toggleMirror()" id="mirrorBtn">⟷ Mirror</button>
       <button onclick="scrollToTop()">↑ Efst</button>
+      <button onclick="toggleDarkMode()" id="darkModeBtn">☀ Ljóst</button>
       <button onclick="toggleFullscreen()">⛶</button>
     </div>
   </div>
@@ -704,6 +729,41 @@
       }
     }
 
+    // Dark mode
+    let isDarkMode = false;
+
+    function initDarkMode() {
+      const saved = localStorage.getItem('booth-dark-mode');
+      if (saved === 'true') {
+        isDarkMode = true;
+        document.documentElement.setAttribute('data-theme', 'dark');
+        updateDarkModeBtn();
+      }
+    }
+
+    function toggleDarkMode() {
+      isDarkMode = !isDarkMode;
+      if (isDarkMode) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+      }
+      localStorage.setItem('booth-dark-mode', isDarkMode);
+      updateDarkModeBtn();
+    }
+
+    function updateDarkModeBtn() {
+      const btn = document.getElementById('darkModeBtn');
+      if (isDarkMode) {
+        btn.textContent = '☾ Dökkt';
+        btn.classList.add('active');
+      } else {
+        btn.textContent = '☀ Ljóst';
+        btn.classList.remove('active');
+      }
+    }
+
+    initDarkMode();
     initConnection();
   </script>
 </body>
