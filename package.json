@@ -4,14 +4,14 @@
   "description": "Verkefnastjórnun fyrir Audioland með booth-view",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "auth": "node google-auth.js"
+    "start": "node server.js"
   },
   "dependencies": {
+    "@libsql/client": "^0.14.0",
+    "ably": "^2.17.0",
+    "dotenv": "^17.2.3",
     "express": "^4.18.2",
     "sql.js": "^1.10.0",
-    "ws": "^8.16.0",
-    "googleapis": "^128.0.0",
-    "open": "^8.4.2"
+    "ws": "^8.16.0"
   }
 }

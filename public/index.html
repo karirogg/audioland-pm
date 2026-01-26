@@ -341,6 +341,7 @@
         <div class="modal-footer-right">
           <button type="button" class="btn btn-secondary" id="sendaBoothBtn" style="display: none;" onclick="sendaIBooth()">📺 Senda í Booth</button>
           <button type="button" class="btn btn-ghost" onclick="lokaModal()">Loka</button>
+          <button type="button" class="btn btn-primary" onclick="autosave()">Vista</button>
         </div>
       </div>
     </div>
@@ -355,13 +356,31 @@
     let ws = null;
     let saveTimeout = null;
     let currentVerkefniId = null;
+    let useAbly = false;
+
+    async function initConnection() {
+      try {
+        const configRes = await fetch('/api/config');
+        const config = await configRes.json();
+        useAbly = config.useAbly;
+
+        if (!useAbly) {
+          // Development: use WebSocket
+          connectWS();
+        }
+        // Production with Ably: no WebSocket needed, we'll use HTTP POST
+      } catch (err) {
+        console.error('Config fetch failed, using WebSocket:', err);
+        connectWS();
+      }
+    }
 
     function connectWS() {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       ws = new WebSocket(protocol + '//' + window.location.host + '/dashboard-ws');
       ws.onclose = () => setTimeout(connectWS, 3000);
     }
-    connectWS();
+    initConnection();
 
     async function saekjaVerkefni() {
       try {
@@ -572,13 +591,38 @@
       }
     }
 
-    function sendaIBooth() {
+    async function sendaIBooth() {
       const nafn = document.getElementById('nafn').value;
       const handrit = document.getElementById('handrit').value;
       const lesari = document.getElementById('lesari').value;
-      if (ws && ws.readyState === 1) {
-        ws.send(JSON.stringify({ type: 'handrit', nafn, handrit, lesari, take: 1 }));
-        alert('Sent í booth!');
+      const googleDocUrl = document.getElementById('google_doc_url').value;
+      let googleDocId = null;
+      if (googleDocUrl) {
+        const match = googleDocUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+        if (match) googleDocId = match[1];
+      }
+
+      if (useAbly) {
+        // Production: use HTTP POST (server will broadcast via Ably)
+        try {
+          await fetch('/api/booth/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nafn, handrit, lesari, googleDocId, take: 1 })
+          });
+          alert('Sent í booth!');
+        } catch (err) {
+          console.error('Villa við að senda í booth:', err);
+          alert('Villa við að senda í booth');
+        }
+      } else {
+        // Development: use WebSocket
+        if (ws && ws.readyState === 1) {
+          ws.send(JSON.stringify({ type: 'handrit', nafn, handrit, lesari, googleDocId, take: 1 }));
+          alert('Sent í booth!');
+        } else {
+          alert('Ekki tengt við server');
+        }
       }
     }
 
