@@ -356,8 +356,12 @@
   <!-- Miðjulína -->
   <div class="center-line" id="centerLine" style="display: none;"></div>
 
+  <!-- Ably SDK for production -->
+  <script src="https://cdn.ably.com/lib/ably.min-1.js"></script>
   <script>
     let ws;
+    let ably;
+    let boothChannel;
     let reconnectInterval;
     let autoScrollInterval = null;
     let currentFontSize = 2;
@@ -366,13 +370,87 @@
     let googleDocId = null;
     let googleDocPollInterval = null;
     let isLeftAligned = false;
+    let useAbly = false;
 
-    function connect() {
+    async function initConnection() {
+      try {
+        const configRes = await fetch('/api/config');
+        const config = await configRes.json();
+        useAbly = config.useAbly;
+
+        if (useAbly) {
+          console.log('Using Ably for real-time connection');
+          connectAbly();
+        } else {
+          console.log('Using WebSocket for real-time connection');
+          connectWebSocket();
+        }
+      } catch (err) {
+        console.error('Config fetch failed, falling back to WebSocket:', err);
+        connectWebSocket();
+      }
+    }
+
+    async function connectAbly() {
+      try {
+        // Get token from server
+        const tokenRes = await fetch('/api/ably-token');
+        const tokenRequest = await tokenRes.json();
+
+        ably = new Ably.Realtime({ authCallback: (params, callback) => {
+          fetch('/api/ably-token')
+            .then(res => res.json())
+            .then(token => callback(null, token))
+            .catch(err => callback(err, null));
+        }});
+
+        ably.connection.on('connected', async () => {
+          console.log('Ably tengdist');
+          document.getElementById('statusDot').classList.add('connected');
+          document.getElementById('statusText').textContent = 'Tengt (Ably)';
+
+          // Get initial state
+          try {
+            const stateRes = await fetch('/api/booth/state');
+            const state = await stateRes.json();
+            if (state.handrit) {
+              handleMessage({ type: 'state', ...state });
+            }
+          } catch (err) {
+            console.error('Failed to fetch initial state:', err);
+          }
+        });
+
+        ably.connection.on('disconnected', () => {
+          console.log('Ably aftengt');
+          document.getElementById('statusDot').classList.remove('connected');
+          document.getElementById('statusText').textContent = 'Aftengt...';
+        });
+
+        ably.connection.on('failed', (err) => {
+          console.error('Ably connection failed:', err);
+          document.getElementById('statusDot').classList.remove('connected');
+          document.getElementById('statusText').textContent = 'Tenging mistókst';
+        });
+
+        // Subscribe to booth channel
+        boothChannel = ably.channels.get('booth');
+        boothChannel.subscribe('message', (message) => {
+          handleMessage(message.data);
+        });
+
+      } catch (err) {
+        console.error('Ably init failed:', err);
+        document.getElementById('statusText').textContent = 'Villa við Ably tengingu';
+      }
+    }
+
+    function connectWebSocket() {
       const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
       ws = new WebSocket(`${protocol}//${location.host}/booth-ws`);
 
       ws.onopen = () => {
-        console.log('Tengdist');
+        console.log('WebSocket tengdist');
         document.getElementById('statusDot').classList.add('connected');
         document.getElementById('statusText').textContent = 'Tengt';
         if (reconnectInterval) {
@@ -382,14 +460,14 @@
       };
 
       ws.onclose = () => {
-        console.log('Aftengt');
+        console.log('WebSocket aftengt');
         document.getElementById('statusDot').classList.remove('connected');
         document.getElementById('statusText').textContent = 'Aftengt - reyni aftur...';
-        
+
         if (!reconnectInterval) {
           reconnectInterval = setInterval(() => {
             console.log('Reyni að tengjast aftur...');
-            connect();
+            connectWebSocket();
           }, 3000);
         }
       };
@@ -626,7 +704,7 @@
       }
     }
 
-    connect();
+    initConnection();
   </script>
 </body>
 </html>
