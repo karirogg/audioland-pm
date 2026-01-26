@@ -1095,6 +1095,7 @@
       let saveTimeout = null;
       let currentVerkefniId = null;
       let useAbly = false;
+      let googleDocPollInterval = null;
 
       async function initConnection() {
         try {
@@ -1255,6 +1256,7 @@
           document.getElementById("myndBase64").value = "";
           document.getElementById("myndPreview").innerHTML = "";
           document.getElementById("saveStatus").textContent = "";
+          stopGoogleDocPolling();
           tempTimaSkraningar = [];
           tempAdkeypt = [];
           birtaTimaSkraningar();
@@ -1278,6 +1280,7 @@
       function lokaModal() {
         document.getElementById("modalOverlay").classList.remove("active");
         currentVerkefniId = null;
+        stopGoogleDocPolling();
         saekjaVerkefni();
       }
 
@@ -1331,6 +1334,14 @@
               '" style="max-width:150px;max-height:100px;border-radius:8px;">';
           } else {
             document.getElementById("myndPreview").innerHTML = "";
+          }
+
+          // Start Google Doc polling if URL exists
+          if (v.google_doc_url) {
+            const match = v.google_doc_url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+            if (match) {
+              startGoogleDocPolling(match[1]);
+            }
           }
 
           await saekjaTimaskraningar(v.id);
@@ -1419,10 +1430,40 @@
         .addEventListener("change", triggerAutosave);
 
       // Google Doc - sækja handrit sjálfkrafa
+      function startGoogleDocPolling(docId) {
+        stopGoogleDocPolling();
+        if (!docId) return;
+
+        googleDocPollInterval = setInterval(async () => {
+          try {
+            const res = await fetch("/api/google-doc/" + docId);
+            if (res.ok) {
+              const data = await res.json();
+              const currentText = document.getElementById("handrit").value;
+              if (data.content && data.content !== currentText) {
+                document.getElementById("handrit").value = data.content;
+                // Don't trigger autosave on poll updates to avoid spam
+              }
+            }
+          } catch (err) {
+            console.error("Villa við að sækja Google Doc:", err);
+          }
+        }, 3000);
+      }
+
+      function stopGoogleDocPolling() {
+        if (googleDocPollInterval) {
+          clearInterval(googleDocPollInterval);
+          googleDocPollInterval = null;
+        }
+      }
+
       document
         .getElementById("google_doc_url")
         .addEventListener("change", async function () {
           const url = this.value;
+          stopGoogleDocPolling();
+
           if (!url) return;
 
           const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
@@ -1438,6 +1479,8 @@
               document.getElementById("handrit").value =
                 data.content || data.text || "";
               triggerAutosave();
+              // Start polling for updates
+              startGoogleDocPolling(docId);
             } else {
               document.getElementById("handrit").value =
                 'Villa við að sækja handrit. Athugaðu að Google Doc sé opið fyrir "Anyone with the link".';
