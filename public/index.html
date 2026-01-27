@@ -1443,6 +1443,7 @@
       let currentFilter = "all";
       let currentView = "grid";
       let currentTimeType = "timi";
+      let isLoadingProject = false;
       let tempTimaSkraningar = [];
       let tempAdkeypt = [];
       let ws = null;
@@ -1620,6 +1621,8 @@
 
       async function nyttVerkefni() {
         // Búa til tómt verkefni í database
+        isLoadingProject = true;
+        if (saveTimeout) clearTimeout(saveTimeout);
         try {
           const res = await fetch("/api/verkefni", {
             method: "POST",
@@ -1651,12 +1654,14 @@
             const nafnInput = document.getElementById("nafn");
             nafnInput.focus();
             nafnInput.select();
+            isLoadingProject = false;
           }, 100);
 
           saekjaVerkefni();
         } catch (err) {
           console.error(err);
           alert("Villa við að búa til verkefni");
+          isLoadingProject = false;
         }
       }
 
@@ -1691,6 +1696,8 @@
       }
 
       async function opnaVerkefni(id) {
+        isLoadingProject = true;
+        if (saveTimeout) clearTimeout(saveTimeout);
         try {
           const res = await fetch("/api/verkefni/" + id);
           const v = await res.json();
@@ -1753,14 +1760,16 @@
           await saekjaTimaskraningar(v.id);
           await saekjaAdkeypt(v.id);
           switchTab("grunnur");
+          isLoadingProject = false;
         } catch (err) {
           console.error(err);
+          isLoadingProject = false;
         }
       }
 
       // Autosave
       function triggerAutosave() {
-        if (!currentVerkefniId) return;
+        if (!currentVerkefniId || isLoadingProject) return;
 
         document.getElementById("saveStatus").innerHTML = "⏳ Vista...";
         document.getElementById("saveStatus").className = "save-status saving";
