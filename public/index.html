@@ -148,21 +148,46 @@
         color: var(--text);
         background: var(--bg-card);
       }
-      .btn-danger {
+      .btn-outline {
         background: transparent;
-        color: var(--danger);
-        border: 1px solid var(--danger);
+        color: var(--text);
+        border: 1px solid var(--border);
       }
-      .btn-danger:hover {
+      .btn-outline:hover {
+        background: var(--bg-card-hover);
+        border-color: var(--text-dim);
+      }
+      .btn-outline-danger {
+        color: var(--danger);
+        border-color: var(--danger);
+      }
+      .btn-outline-danger:hover {
         background: var(--danger);
         color: #fff;
+        border-color: var(--danger);
+      }
+      .btn-outline-primary {
+        color: var(--accent);
+        border-color: var(--accent);
+      }
+      .btn-outline-primary:hover {
+        background: var(--accent);
+        color: #000;
+        border-color: var(--accent);
       }
       .user-info {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
         font-size: 0.85rem;
         color: var(--text-dim);
         padding: 0.5rem 0.75rem;
         background: var(--bg-card);
         border-radius: 6px;
+      }
+      .user-status {
+        color: var(--success);
+        font-size: 0.6rem;
       }
       .btn-small {
         padding: 0.4rem 0.8rem;
@@ -405,6 +430,14 @@
         font-size: 0.8rem;
         color: var(--text-dim);
       }
+      .card-number {
+        font-size: 0.7rem;
+        color: var(--text-dim);
+        font-weight: 500;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.25rem;
+        display: block;
+      }
       .card-booth-btn {
         position: absolute;
         top: -0.5rem;
@@ -480,6 +513,14 @@
         top: 0;
         background: var(--modal-bg);
         z-index: 10;
+      }
+      .modal-number {
+        font-size: 0.75rem;
+        color: var(--text-dim);
+        font-weight: 500;
+        letter-spacing: 0.05em;
+        display: block;
+        margin-bottom: 0.25rem;
       }
       .modal-title {
         font-size: 1.25rem;
@@ -991,8 +1032,11 @@
         </div>
       </div>
       <div class="header-actions">
-        <span id="userInfo" class="user-info" style="display:none;"></span>
-        <a href="/auth/logout" class="btn btn-ghost" id="logoutBtn" style="display:none;" title="Útskrá">↪</a>
+        <span id="userInfo" class="user-info" style="display:none;">
+          <span class="user-status">●</span>
+          <span id="userName"></span>
+        </span>
+        <a href="/auth/logout" class="btn btn-ghost" id="logoutBtn" style="display:none;" title="Útskrá">Útskrá</a>
         <button
           class="btn btn-ghost"
           id="darkModeBtn"
@@ -1049,7 +1093,10 @@
     <div class="modal-overlay" id="modalOverlay">
       <div class="modal" onclick="event.stopPropagation()">
         <div class="modal-header">
-          <h2 class="modal-title" id="modalTitle">Verkefni</h2>
+          <div>
+            <span class="modal-number" id="modalNumber"></span>
+            <h2 class="modal-title" id="modalTitle">Verkefni</h2>
+          </div>
           <button class="modal-close" onclick="lokaModal()">&times;</button>
         </div>
         <div class="modal-body">
@@ -1420,35 +1467,27 @@
           <div class="modal-footer-right">
             <button
               type="button"
-              class="btn btn-danger"
+              class="btn btn-outline btn-outline-danger"
               id="eydaBtn"
               style="display: none"
               onclick="eydaVerkefni()"
             >
-              🗑️ Eyða
+              Eyða
             </button>
             <button
               type="button"
-              class="btn btn-ghost"
-              onclick="window.open('booth.html', 'booth', 'width=1200,height=800')"
-              title="Opna booth glugga"
-            >
-              🎙️
-            </button>
-            <button
-              type="button"
-              class="btn btn-secondary"
+              class="btn btn-outline"
               id="sendaBoothBtn"
               style="display: none"
               onclick="sendaIBooth()"
             >
-              Senda í Booth
+              🎙️ Senda í Booth
             </button>
-            <button type="button" class="btn btn-ghost" onclick="lokaModal()">
-              Loka
-            </button>
-            <button type="button" class="btn btn-primary" onclick="autosave()">
+            <button type="button" class="btn btn-outline btn-outline-primary" onclick="autosave()">
               Vista
+            </button>
+            <button type="button" class="btn btn-outline" onclick="lokaModal()">
+              Loka
             </button>
           </div>
         </div>
@@ -1576,12 +1615,14 @@
                   tpiMIn +
                   " mín</span>"
                 : '<span class="card-time">⏱️ 0 mín</span>';
+            const vnumer = v.verkefnanumer ? '<span class="card-number">' + v.verkefnanumer + '</span>' : '';
             if (currentView === 'list') {
               return (
                 '<div class="card ' + stadaClass + '" onclick="opnaVerkefni(' + v.id + ')">' +
                 '<div class="card-image">' +
                 (v.mynd ? '<img src="' + v.mynd + '">' : '<img class="placeholder" src="AppLogo.png" alt="">') +
                 '</div><div class="card-content">' +
+                vnumer +
                 '<div class="card-title">' + v.nafn + '</div>' +
                 '<div class="card-subtitle">' + (v.lesari || "—") + '</div>' +
                 '<div class="card-meta"><div>' + (v.stofa || "—") + '</div>' + timeDisplay + '</div>' +
@@ -1603,7 +1644,9 @@
               badgeClass +
               '">' +
               v.stada +
-              '</span></div><div class="card-content"><div class="card-title">' +
+              '</span></div><div class="card-content">' +
+              vnumer +
+              '<div class="card-title">' +
               v.nafn +
               '</div><div class="card-subtitle">' +
               (v.lesari || "Enginn lesari") +
@@ -1658,6 +1701,7 @@
           currentVerkefniId = result.id;
 
           document.getElementById("modalOverlay").classList.add("active");
+          document.getElementById("modalNumber").textContent = "";
           document.getElementById("modalTitle").textContent = "Nýtt verkefni";
           document.getElementById("sendaBoothBtn").style.display = "none";
           document.getElementById("eydaBtn").style.display = "none";
@@ -1729,8 +1773,8 @@
           currentVerkefniId = id;
 
           document.getElementById("modalOverlay").classList.add("active");
-          document.getElementById("modalTitle").textContent =
-            v.nafn || "Verkefni";
+          document.getElementById("modalNumber").textContent = v.verkefnanumer || "";
+          document.getElementById("modalTitle").textContent = v.nafn || "Verkefni";
           document.getElementById("sendaBoothBtn").style.display = "inline-flex";
           document.getElementById("eydaBtn").style.display = "inline-flex";
           document.getElementById("saveStatus").textContent = "";
@@ -2324,8 +2368,8 @@
           const res = await fetch('/auth/user');
           const data = await res.json();
           if (data.user) {
-            document.getElementById('userInfo').textContent = data.user.email;
-            document.getElementById('userInfo').style.display = 'block';
+            document.getElementById('userName').textContent = data.user.name || data.user.email;
+            document.getElementById('userInfo').style.display = 'flex';
             document.getElementById('logoutBtn').style.display = 'flex';
           }
         } catch (err) {

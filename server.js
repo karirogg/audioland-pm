@@ -276,16 +276,31 @@ app.post("/api/verkefni", async (req, res) => {
       if (match) google_doc_id = match[1];
     }
 
+    // Generate verkefnanumer: YYMM-NNN
+    const now = new Date();
+    const prefix = now.toISOString().slice(2, 4) + now.toISOString().slice(5, 7); // e.g. "2601"
+    const existing = await dbAll(
+      "SELECT verkefnanumer FROM verkefni WHERE verkefnanumer LIKE ? ORDER BY verkefnanumer DESC LIMIT 1",
+      [prefix + "-%"]
+    );
+    let seq = 1;
+    if (existing.length > 0 && existing[0].verkefnanumer) {
+      const lastNum = parseInt(existing[0].verkefnanumer.split("-")[1]) || 0;
+      seq = lastNum + 1;
+    }
+    const verkefnanumer = prefix + "-" + String(seq).padStart(3, "0");
+
     const result = await dbRun(
       `
-      INSERT INTO verkefni (nafn, mynd, framleidsla, produser, produser_simi, produser_netfang,
+      INSERT INTO verkefni (verkefnanumer, nafn, mynd, framleidsla, produser, produser_simi, produser_netfang,
         stofa, tengill_nafn, tengill_simi, tengill_netfang, art_director, art_director_simi,
         copywriter, copywriter_simi, lesari, handrit, google_doc_url, google_doc_id,
         tonlist_titill, tonlist_heimild, tonlist_url, tonlist_kostnadur,
         stada, athugasemdir, payday_tengill, dropbox_slod, mottekid, skilad)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `,
       [
+        verkefnanumer,
         b.nafn || "",
         b.mynd || "",
         b.framleidsla || "",

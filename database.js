@@ -14,6 +14,7 @@ let tursoClient = null;
 const CREATE_TABLES_SQL = [
   `CREATE TABLE IF NOT EXISTS verkefni (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    verkefnanumer TEXT,
     nafn TEXT NOT NULL,
     mynd TEXT,
     framleidsla TEXT,
