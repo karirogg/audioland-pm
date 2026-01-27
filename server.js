@@ -4,6 +4,15 @@ const express = require("express");
 const { WebSocketServer } = require("ws");
 const http = require("http");
 const path = require("path");
+const session = require("express-session");
+const passport = require("passport");
+const GoogleStrategy = require("passport-google-oauth20").Strategy;
+
+// Allowed email addresses
+const ALLOWED_EMAILS = [
+  "joi@audioland.is",
+  "karirogg@gmail.com"
+];
 const {
   initDatabase,
   getDb,
@@ -77,7 +86,97 @@ if (!isProduction) {
   });
 }
 
+// Session setup
+app.use(session({
+  secret: process.env.SESSION_SECRET || "bessi-secret-key-change-in-production",
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: isProduction,
+    maxAge: 7 * 24 * 60 * 60 * 1000 // 1 week
+  }
+}));
+
+// Passport setup
+app.use(passport.initialize());
+app.use(passport.session());
+
+// Google OAuth credentials (from environment)
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+
+// Only setup Google auth if credentials exist
+if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
+  passport.use(new GoogleStrategy({
+      clientID: GOOGLE_CLIENT_ID,
+      clientSecret: GOOGLE_CLIENT_SECRET,
+      callbackURL: "/auth/google/callback"
+    },
+    (accessToken, refreshToken, profile, done) => {
+      const email = profile.emails && profile.emails[0] && profile.emails[0].value;
+      if (email && ALLOWED_EMAILS.includes(email.toLowerCase())) {
+        return done(null, { id: profile.id, email, name: profile.displayName });
+      }
+      return done(null, false, { message: "Email ekki á leyfilegum lista" });
+    }
+  ));
+  console.log("Google OAuth initialized");
+} else {
+  console.log("Google OAuth disabled (no credentials)");
+}
+
+passport.serializeUser((user, done) => done(null, user));
+passport.deserializeUser((user, done) => done(null, user));
+
+// Auth middleware
+function requireAuth(req, res, next) {
+  if (req.isAuthenticated()) {
+    return next();
+  }
+  if (req.path.startsWith("/api/")) {
+    return res.status(401).json({ error: "Þú þarft að skrá þig inn" });
+  }
+  res.redirect("/login.html");
+}
+
+// Auth routes
+app.get("/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
+
+app.get("/auth/google/callback",
+  passport.authenticate("google", { failureRedirect: "/login.html?error=unauthorized" }),
+  (req, res) => res.redirect("/")
+);
+
+app.get("/auth/logout", (req, res) => {
+  req.logout(() => {
+    res.redirect("/login.html");
+  });
+});
+
+app.get("/auth/user", (req, res) => {
+  if (req.isAuthenticated()) {
+    res.json({ user: req.user });
+  } else {
+    res.json({ user: null });
+  }
+});
+
 app.use(express.json({ limit: "10mb" }));
+
+// Protect all pages except login and auth routes (only if auth is configured)
+if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
+  app.use((req, res, next) => {
+    // Allow auth routes
+    if (req.path.startsWith("/auth/")) return next();
+    // Allow login page
+    if (req.path === "/login.html") return next();
+    // Allow booth (might be on TV without login)
+    if (req.path === "/booth.html" || req.path.startsWith("/api/booth")) return next();
+    // Require auth for everything else
+    return requireAuth(req, res, next);
+  });
+}
+
 app.use(express.static(path.join(__dirname, "public")));
 
 // Broadcast to booth - works in both dev (WebSocket) and prod (Ably)
