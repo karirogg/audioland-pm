@@ -1613,8 +1613,9 @@
         return new Date(date).toLocaleDateString("is-IS");
       }
 
-      function setView(view) {
+      function setView(view, save = true) {
         currentView = view;
+        if (save) localStorage.setItem('bessi-view', view);
         document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
         document.querySelector('.view-btn[onclick="setView(\'' + view + '\')"]').classList.add('active');
 
@@ -1625,6 +1626,13 @@
           grid.classList.remove('list-view');
         }
         birtaVerkefni();
+      }
+
+      function initView() {
+        const saved = localStorage.getItem('bessi-view');
+        if (saved === 'list') {
+          setView('list', false);
+        }
       }
 
       async function nyttVerkefni() {
@@ -2302,6 +2310,7 @@
       }
 
       initDarkMode();
+      initView();
       saekjaVerkefni();
       saekjaStofur();
       saekjaFramleidslu();
