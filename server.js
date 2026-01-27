@@ -4,7 +4,7 @@ const express = require("express");
 const { WebSocketServer } = require("ws");
 const http = require("http");
 const path = require("path");
-const session = require("express-session");
+const cookieSession = require("cookie-session");
 const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 
@@ -86,16 +86,30 @@ if (!isProduction) {
   });
 }
 
-// Session setup
-app.use(session({
-  secret: process.env.SESSION_SECRET || "bessi-secret-key-change-in-production",
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: isProduction,
-    maxAge: 7 * 24 * 60 * 60 * 1000 // 1 week
-  }
+// Trust proxy for Vercel
+if (isProduction) {
+  app.set('trust proxy', 1);
+}
+
+// Cookie-session setup (works with serverless)
+app.use(cookieSession({
+  name: 'bessi-session',
+  keys: [process.env.SESSION_SECRET || "bessi-secret-key-change-in-production"],
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 1 week
+  secure: isProduction,
+  sameSite: isProduction ? 'none' : 'lax'
 }));
+
+// Fix for passport + cookie-session compatibility
+app.use((req, res, next) => {
+  if (req.session && !req.session.regenerate) {
+    req.session.regenerate = (cb) => cb();
+  }
+  if (req.session && !req.session.save) {
+    req.session.save = (cb) => cb();
+  }
+  next();
+});
 
 // Passport setup
 app.use(passport.initialize());
