@@ -2365,7 +2365,7 @@
       // Fetch current user
       async function fetchUser() {
         try {
-          const res = await fetch('/auth/user');
+          const res = await fetch('/auth/user', { credentials: 'include' });
           const data = await res.json();
           if (data.user) {
             document.getElementById('userName').textContent = data.user.name || data.user.email;

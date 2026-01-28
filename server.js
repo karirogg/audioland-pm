@@ -97,7 +97,7 @@ app.use(cookieSession({
   keys: [process.env.SESSION_SECRET || "bessi-secret-key-change-in-production"],
   maxAge: 7 * 24 * 60 * 60 * 1000, // 1 week
   secure: isProduction,
-  sameSite: isProduction ? 'none' : 'lax'
+  sameSite: 'lax'
 }));
 
 // Fix for passport + cookie-session compatibility
