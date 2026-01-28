@@ -12,8 +12,18 @@ let tursoClient = null;
 
 // SQL statements for table creation
 const CREATE_TABLES_SQL = [
+  `CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    google_id TEXT UNIQUE,
+    email TEXT UNIQUE NOT NULL,
+    nafn TEXT,
+    mynd TEXT,
+    is_admin INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )`,
   `CREATE TABLE IF NOT EXISTS verkefni (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
     verkefnanumer TEXT,
     nafn TEXT NOT NULL,
     mynd TEXT,

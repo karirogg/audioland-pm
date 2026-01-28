@@ -8,11 +8,6 @@ const cookieSession = require("cookie-session");
 const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 
-// Allowed email addresses
-const ALLOWED_EMAILS = [
-  "joi@audioland.is",
-  "karirogg@gmail.com"
-];
 const {
   initDatabase,
   getDb,
@@ -126,12 +121,44 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
       clientSecret: GOOGLE_CLIENT_SECRET,
       callbackURL: "/auth/google/callback"
     },
-    (accessToken, refreshToken, profile, done) => {
+    async (accessToken, refreshToken, profile, done) => {
       const email = profile.emails && profile.emails[0] && profile.emails[0].value;
-      if (email && ALLOWED_EMAILS.includes(email.toLowerCase())) {
-        return done(null, { id: profile.id, email, name: profile.displayName });
+      if (!email) {
+        return done(null, false, { message: "Ekkert email fannst" });
       }
-      return done(null, false, { message: "Email ekki á leyfilegum lista" });
+
+      try {
+        // Check if user exists
+        let user = await dbGet("SELECT * FROM users WHERE email = ?", [email.toLowerCase()]);
+
+        if (!user) {
+          // Create new user
+          const result = await dbRun(
+            "INSERT INTO users (google_id, email, nafn, mynd) VALUES (?, ?, ?, ?)",
+            [profile.id, email.toLowerCase(), profile.displayName, profile.photos?.[0]?.value || ""]
+          );
+          user = {
+            id: result.lastInsertRowid,
+            google_id: profile.id,
+            email: email.toLowerCase(),
+            nafn: profile.displayName,
+            mynd: profile.photos?.[0]?.value || "",
+            is_admin: 0
+          };
+        } else {
+          // Update existing user info
+          await dbRun(
+            "UPDATE users SET google_id = ?, nafn = ?, mynd = ? WHERE id = ?",
+            [profile.id, profile.displayName, profile.photos?.[0]?.value || "", user.id]
+          );
+          user.nafn = profile.displayName;
+          user.mynd = profile.photos?.[0]?.value || "";
+        }
+
+        return done(null, user);
+      } catch (err) {
+        return done(err);
+      }
     }
   ));
   console.log("Google OAuth initialized");
@@ -139,8 +166,15 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
   console.log("Google OAuth disabled (no credentials)");
 }
 
-passport.serializeUser((user, done) => done(null, user));
-passport.deserializeUser((user, done) => done(null, user));
+passport.serializeUser((user, done) => done(null, user.id));
+passport.deserializeUser(async (id, done) => {
+  try {
+    const user = await dbGet("SELECT * FROM users WHERE id = ?", [id]);
+    done(null, user);
+  } catch (err) {
+    done(err);
+  }
+});
 
 // Auth middleware
 function requireAuth(req, res, next) {
@@ -168,8 +202,16 @@ app.get("/auth/logout", (req, res) => {
 });
 
 app.get("/auth/user", (req, res) => {
-  if (req.isAuthenticated()) {
-    res.json({ user: req.user });
+  if (req.isAuthenticated() && req.user) {
+    res.json({
+      user: {
+        id: req.user.id,
+        email: req.user.email,
+        name: req.user.nafn,
+        mynd: req.user.mynd,
+        is_admin: req.user.is_admin
+      }
+    });
   } else {
     res.json({ user: null });
   }
@@ -256,12 +298,29 @@ async function dbRun(sql, params = []) {
 // API - Verkefni
 app.get("/api/verkefni", async (req, res) => {
   try {
-    const verkefni = await dbAll(`
-      SELECT v.*,
-        COALESCE((SELECT SUM(timi_minutur) FROM timaskraning WHERE verkefni_id = v.id AND tegund = 'timi'), 0) as total_minutes
-      FROM verkefni v
-      ORDER BY v.created_at DESC
-    `);
+    const userId = req.user?.id;
+    const isAdmin = req.user?.is_admin === 1;
+
+    let verkefni;
+    if (isAdmin) {
+      // Admin sees all projects
+      verkefni = await dbAll(`
+        SELECT v.*, u.nafn as owner_name,
+          COALESCE((SELECT SUM(timi_minutur) FROM timaskraning WHERE verkefni_id = v.id AND tegund = 'timi'), 0) as total_minutes
+        FROM verkefni v
+        LEFT JOIN users u ON v.user_id = u.id
+        ORDER BY v.created_at DESC
+      `);
+    } else {
+      // Regular user sees only their projects
+      verkefni = await dbAll(`
+        SELECT v.*,
+          COALESCE((SELECT SUM(timi_minutur) FROM timaskraning WHERE verkefni_id = v.id AND tegund = 'timi'), 0) as total_minutes
+        FROM verkefni v
+        WHERE v.user_id = ? OR v.user_id IS NULL
+        ORDER BY v.created_at DESC
+      `, [userId]);
+    }
     res.json(verkefni);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -304,16 +363,19 @@ app.post("/api/verkefni", async (req, res) => {
     }
     const verkefnanumer = prefix + "-" + String(seq).padStart(3, "0");
 
+    const userId = req.user?.id;
+
     const result = await dbRun(
       `
-      INSERT INTO verkefni (verkefnanumer, nafn, mynd, framleidsla, produser, produser_simi, produser_netfang,
+      INSERT INTO verkefni (user_id, verkefnanumer, nafn, mynd, framleidsla, produser, produser_simi, produser_netfang,
         stofa, tengill_nafn, tengill_simi, tengill_netfang, art_director, art_director_simi,
         copywriter, copywriter_simi, lesari, handrit, google_doc_url, google_doc_id,
         tonlist_titill, tonlist_heimild, tonlist_url, tonlist_kostnadur,
         stada, athugasemdir, payday_tengill, dropbox_slod, mottekid, skilad)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `,
       [
+        userId,
         verkefnanumer,
         b.nafn || "",
         b.mynd || "",
@@ -373,6 +435,18 @@ app.post(
 
 app.put("/api/verkefni/:id", async (req, res) => {
   try {
+    const userId = req.user?.id;
+    const isAdmin = req.user?.is_admin === 1;
+
+    // Check ownership
+    const verkefni = await dbGet("SELECT user_id FROM verkefni WHERE id = ?", [req.params.id]);
+    if (!verkefni) {
+      return res.status(404).json({ error: "Verkefni fannst ekki" });
+    }
+    if (!isAdmin && verkefni.user_id && verkefni.user_id !== userId) {
+      return res.status(403).json({ error: "Þú hefur ekki aðgang að þessu verkefni" });
+    }
+
     const b = req.body;
     let google_doc_id = "";
     if (b.google_doc_url) {
@@ -429,6 +503,18 @@ app.put("/api/verkefni/:id", async (req, res) => {
 
 app.delete("/api/verkefni/:id", async (req, res) => {
   try {
+    const userId = req.user?.id;
+    const isAdmin = req.user?.is_admin === 1;
+
+    // Check ownership
+    const verkefni = await dbGet("SELECT user_id FROM verkefni WHERE id = ?", [req.params.id]);
+    if (!verkefni) {
+      return res.status(404).json({ error: "Verkefni fannst ekki" });
+    }
+    if (!isAdmin && verkefni.user_id && verkefni.user_id !== userId) {
+      return res.status(403).json({ error: "Þú hefur ekki aðgang að þessu verkefni" });
+    }
+
     await dbRun("DELETE FROM timaskraning WHERE verkefni_id = ?", [req.params.id]);
     await dbRun("DELETE FROM adkeypt WHERE verkefni_id = ?", [req.params.id]);
     await dbRun("DELETE FROM verkefni WHERE id = ?", [req.params.id]);
@@ -717,6 +803,8 @@ app.post("/api/booth/send", async (req, res) => {
 app.get("/api/search", async (req, res) => {
   try {
     const { q, lesari, stofa, stada, from, to } = req.query;
+    const userId = req.user?.id;
+    const isAdmin = req.user?.is_admin === 1;
 
     if (!q || q.trim().length < 2) {
       return res.json([]);
@@ -729,6 +817,12 @@ app.get("/api/search", async (req, res) => {
       WHERE handrit LIKE ?
     `;
     const params = [searchTerm];
+
+    // Filter by user unless admin
+    if (!isAdmin) {
+      sql += " AND (user_id = ? OR user_id IS NULL)";
+      params.push(userId);
+    }
 
     if (lesari) {
       sql += " AND lesari LIKE ?";
