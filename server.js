@@ -226,6 +226,8 @@ if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
     if (req.path.startsWith("/auth/")) return next();
     // Allow login page
     if (req.path === "/login.html") return next();
+    // Allow static assets (images, css, js, fonts)
+    if (req.path.match(/\.(png|jpg|jpeg|gif|svg|ico|css|js|woff|woff2|ttf|eot)$/i)) return next();
     // Allow booth (might be on TV without login)
     if (req.path === "/booth.html" || req.path.startsWith("/api/booth")) return next();
     // Require auth for everything else
