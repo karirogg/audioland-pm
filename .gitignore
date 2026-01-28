@@ -8,6 +8,7 @@ token*.json
 
 # Database
 *.db
+backups/
 
 # Node modules
 node_modules/

@@ -99,6 +99,37 @@ const CREATE_TABLES_SQL = [
   )`,
 ];
 
+// Run migrations for existing databases
+async function runMigrations(execute) {
+  try {
+    // Check if user_id column exists in verkefni
+    const columns = await execute("PRAGMA table_info(verkefni)");
+    const hasUserId = columns.some(col => col.name === 'user_id');
+
+    if (!hasUserId) {
+      console.log("Migration: Adding user_id column to verkefni...");
+      await execute("ALTER TABLE verkefni ADD COLUMN user_id INTEGER");
+
+      // Migrate from user_email to user_id if user_email exists
+      const hasUserEmail = columns.some(col => col.name === 'user_email');
+      if (hasUserEmail) {
+        console.log("Migration: Converting user_email to user_id...");
+        await execute(`
+          UPDATE verkefni SET user_id = (
+            SELECT id FROM users WHERE users.email = verkefni.user_email
+          ) WHERE user_email IS NOT NULL
+        `);
+      }
+
+      // Assign remaining projects to user 1 (joi)
+      await execute("UPDATE verkefni SET user_id = 1 WHERE user_id IS NULL");
+      console.log("Migration complete: user_id column added");
+    }
+  } catch (err) {
+    console.log("Migration error (may be expected on fresh DB):", err.message);
+  }
+}
+
 async function initTursoDatabase() {
   const { createClient } = require("@libsql/client");
 
@@ -111,6 +142,12 @@ async function initTursoDatabase() {
   for (const sql of CREATE_TABLES_SQL) {
     await tursoClient.execute(sql);
   }
+
+  // Run migrations
+  await runMigrations(async (sql) => {
+    const result = await tursoClient.execute(sql);
+    return result.rows;
+  });
 
   // Insert sample data
   const stofur = [
@@ -197,6 +234,15 @@ async function initSqliteDatabase() {
     try {
       db.run("INSERT OR IGNORE INTO framleidsla (nafn) VALUES (?)", [f]);
     } catch (e) {}
+  });
+
+  // Run migrations
+  await runMigrations(async (sql) => {
+    const stmt = db.prepare(sql);
+    const results = [];
+    while (stmt.step()) results.push(stmt.getAsObject());
+    stmt.free();
+    return results;
   });
 
   saveDatabase();
