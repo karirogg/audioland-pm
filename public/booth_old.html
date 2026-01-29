@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="is">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Audioland - Booth</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #333333;
+      --text: #ffffff;
+      --text-dim: #888888;
+      --accent: #ED1C24;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Libre Baskerville', Georgia, serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Bíðskjár */
+    .standby {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 2rem;
+    }
+
+    .standby.hidden {
+      display: none;
+    }
+
+    .standby-logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .standby-logo svg {
+      width: 100px;
+      height: 60px;
+    }
+
+    .standby-logo svg path {
+      fill: none;
+      stroke: var(--accent);
+      stroke-width: 5;
+      stroke-linecap: round;
+    }
+
+    .standby-logo-text {
+      font-size: 3rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .standby-text {
+      font-size: 1.5rem;
+      color: var(--text-dim);
+      font-style: italic;
+    }
+
+    .pulse {
+      width: 16px;
+      height: 16px;
+      background: var(--accent);
+      border-radius: 50%;
+      margin-top: 3rem;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.3; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.3); }
+    }
+
+    /* Handritaskjár */
+    .handrit-view {
+      display: none;
+      flex-direction: column;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .handrit-view.active {
+      display: flex;
+    }
+
+    .handrit-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.5rem 3rem;
+      background: #2a2a2a;
+      border-bottom: 3px solid var(--accent);
+    }
+
+    .header-left {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .verkefni-nafn {
+      font-size: 1.2rem;
+      color: var(--text-dim);
+      font-weight: 400;
+      font-family: system-ui, sans-serif;
+    }
+
+    .lesari-nafn {
+      font-size: 1rem;
+      color: var(--text-dim);
+      font-family: system-ui, sans-serif;
+      margin-top: 0.25rem;
+    }
+
+    .take-display {
+      background: var(--accent);
+      color: white;
+      padding: 0.75rem 2rem;
+      border-radius: 8px;
+      font-size: 1.5rem;
+      font-weight: 700;
+      font-family: system-ui, sans-serif;
+    }
+
+    .handrit-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 3rem 4rem;
+    }
+
+    .handrit-text {
+      line-height: 2;
+      text-align: center;
+      max-width: 1000px;
+      margin: 0 auto;
+      white-space: pre-wrap;
+      font-size: 2.5rem;
+    }
+
+    /* Leturstærðir */
+    .font-size-1 .handrit-text { font-size: 1.8rem; line-height: 1.8; }
+    .font-size-2 .handrit-text { font-size: 2.5rem; line-height: 1.9; }
+    .font-size-3 .handrit-text { font-size: 3.5rem; line-height: 1.8; }
+    .font-size-4 .handrit-text { font-size: 5rem; line-height: 1.6; }
+
+    /* Autoscroll indicator */
+    .scroll-indicator {
+      display: none;
+      position: fixed;
+      bottom: 80px;
+      right: 2rem;
+      background: var(--accent);
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-family: system-ui, sans-serif;
+      font-size: 0.9rem;
+      animation: blink 1s ease-in-out infinite;
+    }
+
+    .scroll-indicator.active {
+      display: block;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* Status bar - alltaf sýnileg */
+    .status-bar {
+      background: #1a1a1a;
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: system-ui, sans-serif;
+      font-size: 1rem;
+      color: var(--text-dim);
+      border-top: 1px solid #444;
+    }
+
+    .connection-status {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .status-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #ef4444;
+    }
+
+    .status-dot.connected {
+      background: #22c55e;
+    }
+
+    .status-controls {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+    }
+
+    .status-controls button {
+      background: #444;
+      border: 2px solid #555;
+      color: var(--text);
+      padding: 0.6rem 1.2rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 500;
+      transition: all 0.15s;
+    }
+
+    .status-controls button:hover {
+      background: #555;
+      border-color: #666;
+    }
+
+    .status-controls button.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+    }
+
+    .separator {
+      color: #555;
+      font-size: 1.5rem;
+    }
+
+  </style>
+</head>
+<body>
+  <!-- Bíðskjár -->
+  <div class="standby" id="standby">
+    <div class="standby-logo">
+      <svg viewBox="0 0 50 30">
+        <path d="M2 20 Q8 20 12 8 Q16 -4 20 15 Q24 34 28 15 Q32 -4 36 8 Q40 20 48 20"/>
+      </svg>
+      <span class="standby-logo-text">Audioland</span>
+    </div>
+    <div class="standby-text">Bíð eftir handriti...</div>
+    <div class="pulse"></div>
+  </div>
+
+  <!-- Handritaskjár -->
+  <div class="handrit-view" id="handritView">
+    <div class="handrit-header">
+      <div class="header-left">
+        <div class="verkefni-nafn" id="verkefniNafn"></div>
+        <div class="lesari-nafn" id="lesariNafn"></div>
+      </div>
+      <div class="take-display">Take <span id="takeNumber">1</span></div>
+    </div>
+    <div class="handrit-content font-size-2" id="handritContent">
+      <div class="handrit-text" id="handritText"></div>
+    </div>
+  </div>
+
+  <div class="scroll-indicator" id="scrollIndicator">▼ AUTOSCROLL</div>
+
+  <!-- Status bar - alltaf sýnileg -->
+  <div class="status-bar">
+    <div class="connection-status">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">Tengist...</span>
+    </div>
+    <div class="status-controls">
+      <button onclick="setFontSize(1)" id="fontBtn1">A</button>
+      <button onclick="setFontSize(2)" id="fontBtn2" class="active">A+</button>
+      <button onclick="setFontSize(3)" id="fontBtn3">A++</button>
+      <button onclick="setFontSize(4)" id="fontBtn4">A+++</button>
+      <span class="separator">|</span>
+      <button onclick="toggleAutoScroll()" id="autoScrollBtn">▶ Scroll</button>
+      <button onclick="scrollToTop()">↑ Efst</button>
+      <button onclick="toggleFullscreen()">⛶ Fullskjár</button>
+    </div>
+  </div>
+
+  <script>
+    let ws;
+    let reconnectInterval;
+    let autoScrollInterval = null;
+    let currentFontSize = 2;
+    let autoScrollActive = false;
+    let scrollSpeed = 50;
+
+    function connect() {
+      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(`${protocol}//${location.host}/booth-ws`);
+
+      ws.onopen = () => {
+        console.log('Tengdist');
+        document.getElementById('statusDot').classList.add('connected');
+        document.getElementById('statusText').textContent = 'Tengt';
+        if (reconnectInterval) {
+          clearInterval(reconnectInterval);
+          reconnectInterval = null;
+        }
+      };
+
+      ws.onclose = () => {
+        console.log('Aftengt');
+        document.getElementById('statusDot').classList.remove('connected');
+        document.getElementById('statusText').textContent = 'Aftengt - reyni aftur...';
+        
+        if (!reconnectInterval) {
+          reconnectInterval = setInterval(() => {
+            console.log('Reyni að tengjast aftur...');
+            connect();
+          }, 3000);
+        }
+      };
+
+      ws.onerror = (err) => {
+        console.error('WebSocket villa:', err);
+      };
+
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        handleMessage(data);
+      };
+    }
+
+    function handleMessage(data) {
+      switch (data.type) {
+        case 'handrit':
+          showHandrit(data);
+          break;
+        case 'state':
+          // Initial state frá server
+          if (data.handrit) {
+            showHandrit(data);
+          }
+          if (data.fontSize) setFontSize(data.fontSize, false);
+          if (data.autoScroll) {
+            autoScrollActive = true;
+            scrollSpeed = data.scrollSpeed || 50;
+            startAutoScroll();
+          }
+          break;
+        case 'take':
+          updateTake(data.take);
+          break;
+        case 'settings':
+          if (data.fontSize) setFontSize(data.fontSize, false);
+          if (typeof data.autoScroll !== 'undefined') {
+            if (data.autoScroll) {
+              scrollSpeed = data.scrollSpeed || 50;
+              startAutoScroll();
+            } else {
+              stopAutoScroll();
+            }
+          }
+          break;
+        case 'hreinsa':
+          showStandby();
+          break;
+      }
+    }
+
+    function showHandrit(data) {
+      document.getElementById('standby').classList.add('hidden');
+      document.getElementById('handritView').classList.add('active');
+      
+      document.getElementById('verkefniNafn').textContent = data.nafn || '';
+      document.getElementById('handritText').textContent = data.handrit || '';
+      document.getElementById('takeNumber').textContent = data.take || 1;
+      document.getElementById('lesariNafn').textContent = data.lesari ? `Lesari: ${data.lesari}` : '';
+
+      // Default font size
+      setFontSize(data.fontSize || 2);
+      
+      if (data.autoScroll) {
+        scrollSpeed = data.scrollSpeed || 50;
+        startAutoScroll();
+      }
+
+      // Byrja efst
+      scrollToTop();
+    }
+
+    function updateTake(take) {
+      document.getElementById('takeNumber').textContent = take;
+    }
+
+    function showStandby() {
+      document.getElementById('standby').classList.remove('hidden');
+      document.getElementById('handritView').classList.remove('active');
+      stopAutoScroll();
+    }
+
+    function setFontSize(size, sendToServer = true) {
+      currentFontSize = size;
+      const content = document.getElementById('handritContent');
+      content.className = 'handrit-content font-size-' + size;
+
+      // Update takkar
+      for (let i = 1; i <= 4; i++) {
+        document.getElementById('fontBtn' + i).classList.remove('active');
+      }
+      document.getElementById('fontBtn' + size).classList.add('active');
+    }
+
+    function toggleAutoScroll() {
+      if (autoScrollActive) {
+        stopAutoScroll();
+      } else {
+        startAutoScroll();
+      }
+    }
+
+    function startAutoScroll() {
+      autoScrollActive = true;
+      document.getElementById('autoScrollBtn').classList.add('active');
+      document.getElementById('scrollIndicator').classList.add('active');
+
+      if (autoScrollInterval) clearInterval(autoScrollInterval);
+      
+      const content = document.getElementById('handritContent');
+      autoScrollInterval = setInterval(() => {
+        content.scrollTop += 1;
+        
+        // Stoppa ef komið niður
+        if (content.scrollTop >= content.scrollHeight - content.clientHeight) {
+          stopAutoScroll();
+        }
+      }, 200 - scrollSpeed); // Hærra scrollSpeed = hraðara
+    }
+
+    function stopAutoScroll() {
+      autoScrollActive = false;
+      document.getElementById('autoScrollBtn').classList.remove('active');
+      document.getElementById('scrollIndicator').classList.remove('active');
+      
+      if (autoScrollInterval) {
+        clearInterval(autoScrollInterval);
+        autoScrollInterval = null;
+      }
+    }
+
+    function scrollToTop() {
+      document.getElementById('handritContent').scrollTop = 0;
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+      } else {
+        document.exitFullscreen();
+      }
+    }
+
+    // Upphaf
+    connect();
+  </script>
+</body>
+</html>

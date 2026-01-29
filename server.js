@@ -1,48 +1,27 @@
-/**
- * Bessi - Audioland Verkefnastjórnun
- *
- * Express server sem þjónar REST API og WebSocket fyrir
- * verkefnastjórnunarkerfi Audioland hljóðvers.
- *
- * @module server
- * @author Audioland ehf
- * @version 2.0.0
- */
-
 require("dotenv").config();
 
 const express = require("express");
 const { WebSocketServer } = require("ws");
 const http = require("http");
 const path = require("path");
-const { createClient } = require("@supabase/supabase-js");
-const { initDatabase, getSupabase } = require("./database");
+const cookieSession = require("cookie-session");
+const passport = require("passport");
+const GoogleStrategy = require("passport-google-oauth20").Strategy;
 
-// ============================================================================
-// STILLINGAR OG UPPSETNING
-// ============================================================================
+const {
+  initDatabase,
+  getDb,
+  getTursoClient,
+  isUsingTurso,
+  saveDatabase,
+} = require("./database");
 
 const app = express();
 const server = http.createServer(app);
+
 const isProduction = process.env.NODE_ENV === "production";
-const PORT = process.env.PORT || 3001;
 
-// Supabase stillingar
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
-
-// Express stillingar
-app.use(express.json({ limit: "10mb" }));
-app.use(express.static(path.join(__dirname, "public")));
-
-if (isProduction) {
-  app.set("trust proxy", 1);
-}
-
-// ============================================================================
-// ABLY UPPSETNING (PRODUCTION WEBSOCKET)
-// ============================================================================
-
+// Ably setup for production
 let ablyRest = null;
 let boothChannel = null;
 
@@ -53,14 +32,7 @@ if (isProduction && process.env.ABLY_API_KEY) {
   console.log("Ably initialized for production");
 }
 
-// ============================================================================
-// BOOTH STATE OG WEBSOCKET (DEVELOPMENT)
-// ============================================================================
-
-/**
- * Núverandi staða booth skjásins
- * @type {Object}
- */
+// Booth state (used in both dev and prod)
 let currentBoothState = {
   handrit: "",
   nafn: "",
@@ -71,7 +43,7 @@ let currentBoothState = {
   scrollSpeed: 50,
 };
 
-// WebSocket fyrir development
+// WebSocket setup for development only
 let wss = null;
 let boothClients = [];
 let dashboardClients = [];
@@ -81,79 +53,198 @@ if (!isProduction) {
 
   wss.on("connection", (ws, req) => {
     if (req.url === "/booth-ws") {
-      handleBoothConnection(ws);
+      boothClients.push(ws);
+      console.log("Booth tengdist");
+      ws.send(JSON.stringify({ type: "state", ...currentBoothState }));
+      ws.on("close", () => {
+        boothClients = boothClients.filter((c) => c !== ws);
+        console.log("Booth aftengdist");
+      });
     } else if (req.url === "/dashboard-ws") {
-      handleDashboardConnection(ws);
+      dashboardClients.push(ws);
+      console.log("Dashboard tengdist");
+      ws.on("message", (msg) => {
+        try {
+          const data = JSON.parse(msg);
+          if (data.type === "handrit") {
+            currentBoothState = { ...currentBoothState, ...data };
+            boothClients.forEach((c) => {
+              if (c.readyState === 1) c.send(JSON.stringify(data));
+            });
+          }
+        } catch (err) {}
+      });
+      ws.on("close", () => {
+        dashboardClients = dashboardClients.filter((c) => c !== ws);
+      });
     }
   });
 }
 
-/**
- * Meðhöndla tengingu frá booth client
- * @param {WebSocket} ws - WebSocket tenging
- */
-function handleBoothConnection(ws) {
-  boothClients.push(ws);
-  console.log("Booth tengdist");
-
-  // Senda núverandi state
-  ws.send(JSON.stringify({ type: "state", ...currentBoothState }));
-
-  ws.on("close", () => {
-    boothClients = boothClients.filter((c) => c !== ws);
-    console.log("Booth aftengdist");
-  });
+// Trust proxy for Vercel
+if (isProduction) {
+  app.set('trust proxy', 1);
 }
 
-/**
- * Meðhöndla tengingu frá dashboard client
- * @param {WebSocket} ws - WebSocket tenging
- */
-function handleDashboardConnection(ws) {
-  dashboardClients.push(ws);
-  console.log("Dashboard tengdist");
+// Cookie-session setup (works with serverless)
+app.use(cookieSession({
+  name: 'bessi-session',
+  keys: [process.env.SESSION_SECRET || "bessi-secret-key-change-in-production"],
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 1 week
+  secure: isProduction,
+  sameSite: 'lax'
+}));
 
-  ws.on("message", (msg) => {
-    try {
-      const data = JSON.parse(msg);
-      if (data.type === "handrit") {
-        currentBoothState = { ...currentBoothState, ...data };
-        broadcastToBoothClients(data);
+// Fix for passport + cookie-session compatibility
+app.use((req, res, next) => {
+  if (req.session && !req.session.regenerate) {
+    req.session.regenerate = (cb) => cb();
+  }
+  if (req.session && !req.session.save) {
+    req.session.save = (cb) => cb();
+  }
+  next();
+});
+
+// Passport setup
+app.use(passport.initialize());
+app.use(passport.session());
+
+// Google OAuth credentials (from environment)
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+
+// Only setup Google auth if credentials exist
+if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
+  passport.use(new GoogleStrategy({
+      clientID: GOOGLE_CLIENT_ID,
+      clientSecret: GOOGLE_CLIENT_SECRET,
+      callbackURL: "/auth/google/callback"
+    },
+    async (accessToken, refreshToken, profile, done) => {
+      const email = profile.emails && profile.emails[0] && profile.emails[0].value;
+      if (!email) {
+        return done(null, false, { message: "Ekkert email fannst" });
       }
-    } catch (err) {
-      console.error("WebSocket message error:", err);
-    }
-  });
 
-  ws.on("close", () => {
-    dashboardClients = dashboardClients.filter((c) => c !== ws);
+      try {
+        // Check if user exists
+        let user = await dbGet("SELECT * FROM users WHERE email = ?", [email.toLowerCase()]);
+
+        if (!user) {
+          // Create new user
+          const result = await dbRun(
+            "INSERT INTO users (google_id, email, nafn, mynd) VALUES (?, ?, ?, ?)",
+            [profile.id, email.toLowerCase(), profile.displayName, profile.photos?.[0]?.value || ""]
+          );
+          user = {
+            id: result.lastInsertRowid,
+            google_id: profile.id,
+            email: email.toLowerCase(),
+            nafn: profile.displayName,
+            mynd: profile.photos?.[0]?.value || "",
+            is_admin: 0
+          };
+        } else {
+          // Update existing user info
+          await dbRun(
+            "UPDATE users SET google_id = ?, nafn = ?, mynd = ? WHERE id = ?",
+            [profile.id, profile.displayName, profile.photos?.[0]?.value || "", user.id]
+          );
+          user.nafn = profile.displayName;
+          user.mynd = profile.photos?.[0]?.value || "";
+        }
+
+        return done(null, user);
+      } catch (err) {
+        return done(err);
+      }
+    }
+  ));
+  console.log("Google OAuth initialized");
+} else {
+  console.log("Google OAuth disabled (no credentials)");
+}
+
+passport.serializeUser((user, done) => done(null, user.id));
+passport.deserializeUser(async (id, done) => {
+  try {
+    const user = await dbGet("SELECT * FROM users WHERE id = ?", [id]);
+    done(null, user);
+  } catch (err) {
+    done(err);
+  }
+});
+
+// Auth middleware
+function requireAuth(req, res, next) {
+  if (req.isAuthenticated()) {
+    return next();
+  }
+  if (req.path.startsWith("/api/")) {
+    return res.status(401).json({ error: "Þú þarft að skrá þig inn" });
+  }
+  res.redirect("/login.html");
+}
+
+// Auth routes
+app.get("/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
+
+app.get("/auth/google/callback",
+  passport.authenticate("google", { failureRedirect: "/login.html?error=unauthorized" }),
+  (req, res) => res.redirect("/")
+);
+
+app.get("/auth/logout", (req, res) => {
+  req.logout(() => {
+    res.redirect("/login.html");
+  });
+});
+
+app.get("/auth/user", (req, res) => {
+  if (req.isAuthenticated() && req.user) {
+    res.json({
+      user: {
+        id: req.user.id,
+        email: req.user.email,
+        name: req.user.nafn,
+        mynd: req.user.mynd,
+        is_admin: req.user.is_admin
+      }
+    });
+  } else {
+    res.json({ user: null });
+  }
+});
+
+app.use(express.json({ limit: "10mb" }));
+
+// Protect all pages except login and auth routes (only if auth is configured)
+if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
+  app.use((req, res, next) => {
+    // Allow auth routes
+    if (req.path.startsWith("/auth/")) return next();
+    // Allow login page
+    if (req.path === "/login.html") return next();
+    // Allow static assets (images, css, js, fonts)
+    if (req.path.match(/\.(png|jpg|jpeg|gif|svg|ico|css|js|woff|woff2|ttf|eot)$/i)) return next();
+    // Allow booth (might be on TV without login)
+    if (req.path === "/booth.html" || req.path.startsWith("/api/booth")) return next();
+    // Require auth for everything else
+    return requireAuth(req, res, next);
   });
 }
 
-/**
- * Senda skilaboð til allra booth clients
- * @param {Object} data - Gögn til að senda
- */
-function broadcastToBoothClients(data) {
-  boothClients.forEach((c) => {
-    if (c.readyState === 1) {
-      c.send(JSON.stringify(data));
-    }
-  });
-}
+app.use(express.static(path.join(__dirname, "public")));
 
-/**
- * Senda gögn til booth (bæði dev og prod)
- * @param {Object} data - Gögn til að senda
- */
+// Broadcast to booth - works in both dev (WebSocket) and prod (Ably)
 async function broadcastToBooth(data) {
-  // Uppfæra local state
   if (data.type === "handrit" || data.type === "settings") {
     currentBoothState = { ...currentBoothState, ...data };
   }
 
-  // Senda til clients
   if (isProduction && boothChannel) {
+    // Production: publish to Ably (must await for serverless!)
     try {
       await boothChannel.publish("message", data);
       console.log("Ably publish success");
@@ -162,792 +253,406 @@ async function broadcastToBooth(data) {
       throw err;
     }
   } else {
-    broadcastToBoothClients(data);
-  }
-}
-
-// ============================================================================
-// AUTHENTICATION MIDDLEWARE
-// ============================================================================
-
-/**
- * Sækja notanda úr JWT token
- * @param {Request} req - Express request
- * @returns {Promise<Object|null>} Notandaupplýsingar eða null
- */
-async function getUser(req) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return null;
-  }
-
-  const token = authHeader.replace("Bearer ", "");
-  const supabase = getSupabase();
-
-  try {
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-
-    if (error || !user) {
-      return null;
-    }
-
-    // Sækja user profile með is_admin
-    const { data: profile } = await supabase
-      .from("users")
-      .select("*")
-      .eq("id", user.id)
-      .single();
-
-    return profile || { id: user.id, email: user.email, is_admin: false };
-  } catch (err) {
-    console.error("Auth error:", err);
-    return null;
-  }
-}
-
-/**
- * Búa til Supabase client með notanda JWT fyrir RLS
- * @param {Request} req - Express request
- * @returns {SupabaseClient} Supabase client
- */
-function getSupabaseForUser(req) {
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return createClient(supabaseUrl, supabaseAnonKey);
-  }
-
-  const token = authHeader.replace("Bearer ", "");
-  return createClient(supabaseUrl, supabaseAnonKey, {
-    global: {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    },
-  });
-}
-
-/**
- * Middleware sem krefst innskráningar
- */
-function requireAuth(req, res, next) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({ error: "Þú þarft að skrá þig inn" });
-  }
-  next();
-}
-
-// Vörn á API routes
-const PUBLIC_PATHS = [
-  "/config",
-  "/booth/state",
-  "/ably-token",
-  "/stofur",
-  "/framleidsla",
-];
-
-app.use("/api", (req, res, next) => {
-  // Leyfa public endpoints
-  if (PUBLIC_PATHS.includes(req.path) ||
-      req.path.startsWith("/booth/") ||
-      req.path.startsWith("/google-doc/")) {
-    return next();
-  }
-  return requireAuth(req, res, next);
-});
-
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
-
-/**
- * Draga Google Doc ID úr URL
- * @param {string} url - Google Docs URL
- * @returns {string} Doc ID eða tómur strengur
- */
-function extractGoogleDocId(url) {
-  if (!url) return "";
-  const match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
-  return match ? match[1] : "";
-}
-
-/**
- * Búa til verkefnanúmer: YYMM-NNN
- * @param {SupabaseClient} supabase - Supabase client
- * @returns {Promise<string>} Verkefnanúmer
- */
-async function generateVerkefnanumer(supabase) {
-  const now = new Date();
-  const prefix = now.toISOString().slice(2, 4) + now.toISOString().slice(5, 7);
-
-  const { data: existing } = await supabase
-    .from("verkefni")
-    .select("verkefnanumer")
-    .like("verkefnanumer", `${prefix}-%`)
-    .order("verkefnanumer", { ascending: false })
-    .limit(1);
-
-  let seq = 1;
-  if (existing?.length > 0 && existing[0].verkefnanumer) {
-    const lastNum = parseInt(existing[0].verkefnanumer.split("-")[1]) || 0;
-    seq = lastNum + 1;
-  }
-
-  return `${prefix}-${String(seq).padStart(3, "0")}`;
-}
-
-/**
- * Standard error handler fyrir API
- * @param {Response} res - Express response
- * @param {Error} err - Villa
- * @param {number} status - HTTP status (default 500)
- */
-function handleApiError(res, err, status = 500) {
-  console.error("API Error:", err.message);
-  res.status(status).json({ error: err.message });
-}
-
-// ============================================================================
-// API ROUTES - CONFIG & AUTH
-// ============================================================================
-
-/**
- * GET /api/config
- * Skilar client stillingar (Supabase URL og anon key)
- */
-app.get("/api/config", (req, res) => {
-  res.json({
-    useAbly: isProduction && !!process.env.ABLY_API_KEY,
-    nodeEnv: process.env.NODE_ENV || "development",
-    supabaseUrl: process.env.SUPABASE_URL,
-    supabaseAnonKey: process.env.SUPABASE_ANON_KEY,
-  });
-});
-
-/**
- * GET /api/auth/user
- * Skilar upplýsingum um innskráðan notanda
- */
-app.get("/api/auth/user", async (req, res) => {
-  const user = await getUser(req);
-  if (user) {
-    res.json({
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.nafn,
-        mynd: user.mynd,
-        is_admin: user.is_admin,
-      },
+    // Development: use WebSocket
+    boothClients.forEach((c) => {
+      if (c.readyState === 1) c.send(JSON.stringify(data));
     });
-  } else {
-    res.json({ user: null });
   }
-});
+}
 
-// ============================================================================
-// API ROUTES - VERKEFNI (PROJECTS)
-// ============================================================================
+// DB helpers - abstraction for both SQLite and Turso
+async function dbAll(sql, params = []) {
+  if (isUsingTurso()) {
+    const client = getTursoClient();
+    const result = await client.execute({ sql, args: params });
+    return result.rows;
+  } else {
+    const db = getDb();
+    const stmt = db.prepare(sql);
+    if (params.length) stmt.bind(params);
+    const results = [];
+    while (stmt.step()) results.push(stmt.getAsObject());
+    stmt.free();
+    return results;
+  }
+}
 
-/**
- * GET /api/verkefni
- * Sækja öll verkefni með tímaskráningum
- */
+async function dbGet(sql, params = []) {
+  const results = await dbAll(sql, params);
+  return results[0] || null;
+}
+
+async function dbRun(sql, params = []) {
+  if (isUsingTurso()) {
+    const client = getTursoClient();
+    const result = await client.execute({ sql, args: params });
+    return { lastInsertRowid: result.lastInsertRowid };
+  } else {
+    const db = getDb();
+    db.run(sql, params);
+    saveDatabase();
+    return {
+      lastInsertRowid: db.exec("SELECT last_insert_rowid()")[0]?.values[0][0],
+    };
+  }
+}
+
+// API - Verkefni
 app.get("/api/verkefni", async (req, res) => {
   try {
-    const supabase = getSupabaseForUser(req);
+    const userId = req.user?.id;
+    const isAdmin = req.user?.is_admin === 1;
 
-    const { data, error } = await supabase
-      .from("verkefni")
-      .select(`
-        *,
-        users!verkefni_user_id_fkey(nafn),
-        timaskraning(timi_minutur, tegund)
-      `)
-      .order("created_at", { ascending: false });
-
-    if (error) throw error;
-
-    // Reikna samtölur og hreinsa gögn
-    const verkefni = data.map((v) => ({
-      ...v,
-      owner_name: v.users?.nafn,
-      total_minutes: v.timaskraning
-        ?.filter((t) => t.tegund === "timi")
-        .reduce((sum, t) => sum + (t.timi_minutur || 0), 0) || 0,
-      users: undefined,
-      timaskraning: undefined,
-    }));
-
+    let verkefni;
+    if (isAdmin) {
+      // Admin sees all projects
+      verkefni = await dbAll(`
+        SELECT v.*, u.nafn as owner_name,
+          COALESCE((SELECT SUM(timi_minutur) FROM timaskraning WHERE verkefni_id = v.id AND tegund = 'timi'), 0) as total_minutes
+        FROM verkefni v
+        LEFT JOIN users u ON v.user_id = u.id
+        ORDER BY v.created_at DESC
+      `);
+    } else {
+      // Regular user sees only their projects
+      verkefni = await dbAll(`
+        SELECT v.*,
+          COALESCE((SELECT SUM(timi_minutur) FROM timaskraning WHERE verkefni_id = v.id AND tegund = 'timi'), 0) as total_minutes
+        FROM verkefni v
+        WHERE v.user_id = ? OR v.user_id IS NULL
+        ORDER BY v.created_at DESC
+      `, [userId]);
+    }
     res.json(verkefni);
   } catch (err) {
-    handleApiError(res, err);
+    res.status(500).json({ error: err.message });
   }
 });
 
-/**
- * GET /api/verkefni/:id
- * Sækja eitt verkefni
- */
 app.get("/api/verkefni/:id", async (req, res) => {
   try {
-    const supabase = getSupabaseForUser(req);
-
-    const { data, error } = await supabase
-      .from("verkefni")
-      .select("*")
-      .eq("id", req.params.id)
-      .single();
-
-    if (error) throw error;
-    if (!data) {
+    const verkefni = await dbGet("SELECT * FROM verkefni WHERE id = ?", [
+      req.params.id,
+    ]);
+    if (!verkefni)
       return res.status(404).json({ error: "Verkefni fannst ekki" });
-    }
-
-    res.json(data);
+    res.json(verkefni);
   } catch (err) {
-    handleApiError(res, err);
+    res.status(500).json({ error: err.message });
   }
 });
 
-/**
- * POST /api/verkefni
- * Búa til nýtt verkefni
- */
 app.post("/api/verkefni", async (req, res) => {
   try {
-    const supabase = getSupabaseForUser(req);
-    const user = await getUser(req);
     const b = req.body;
+    let google_doc_id = "";
+    if (b.google_doc_url) {
+      const match = b.google_doc_url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+      if (match) google_doc_id = match[1];
+    }
 
-    const verkefnanumer = await generateVerkefnanumer(supabase);
-    const google_doc_id = extractGoogleDocId(b.google_doc_url);
+    // Generate verkefnanumer: YYMM-NNN
+    const now = new Date();
+    const prefix = now.toISOString().slice(2, 4) + now.toISOString().slice(5, 7); // e.g. "2601"
+    const existing = await dbAll(
+      "SELECT verkefnanumer FROM verkefni WHERE verkefnanumer LIKE ? ORDER BY verkefnanumer DESC LIMIT 1",
+      [prefix + "-%"]
+    );
+    let seq = 1;
+    if (existing.length > 0 && existing[0].verkefnanumer) {
+      const lastNum = parseInt(existing[0].verkefnanumer.split("-")[1]) || 0;
+      seq = lastNum + 1;
+    }
+    const verkefnanumer = prefix + "-" + String(seq).padStart(3, "0");
 
-    const { data, error } = await supabase
-      .from("verkefni")
-      .insert({
-        user_id: user.id,
+    const userId = req.user?.id;
+
+    const result = await dbRun(
+      `
+      INSERT INTO verkefni (user_id, verkefnanumer, nafn, mynd, framleidsla, produser, produser_simi, produser_netfang,
+        stofa, tengill_nafn, tengill_simi, tengill_netfang, art_director, art_director_simi,
+        copywriter, copywriter_simi, lesari, handrit, google_doc_url, google_doc_id,
+        tonlist_titill, tonlist_heimild, tonlist_url, tonlist_kostnadur,
+        stada, athugasemdir, payday_tengill, dropbox_slod, mottekid, skilad)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    `,
+      [
+        userId,
         verkefnanumer,
-        nafn: b.nafn || "",
-        mynd: b.mynd || "",
-        framleidsla: b.framleidsla || "",
-        produser: b.produser || "",
-        produser_simi: b.produser_simi || "",
-        produser_netfang: b.produser_netfang || "",
-        stofa: b.stofa || "",
-        tengill_nafn: b.tengill_nafn || "",
-        tengill_simi: b.tengill_simi || "",
-        tengill_netfang: b.tengill_netfang || "",
-        art_director: b.art_director || "",
-        art_director_simi: b.art_director_simi || "",
-        copywriter: b.copywriter || "",
-        copywriter_simi: b.copywriter_simi || "",
-        lesari: b.lesari || "",
-        handrit: b.handrit || "",
-        google_doc_url: b.google_doc_url || "",
+        b.nafn || "",
+        b.mynd || "",
+        b.framleidsla || "",
+        b.produser || "",
+        b.produser_simi || "",
+        b.produser_netfang || "",
+        b.stofa || "",
+        b.tengill_nafn || "",
+        b.tengill_simi || "",
+        b.tengill_netfang || "",
+        b.art_director || "",
+        b.art_director_simi || "",
+        b.copywriter || "",
+        b.copywriter_simi || "",
+        b.lesari || "",
+        b.handrit || "",
+        b.google_doc_url || "",
         google_doc_id,
-        tonlist_titill: b.tonlist_titill || "",
-        tonlist_heimild: b.tonlist_heimild || "",
-        tonlist_url: b.tonlist_url || "",
-        tonlist_kostnadur: b.tonlist_kostnadur || 0,
-        stada: b.stada || "Í vinnslu",
-        athugasemdir: b.athugasemdir || "",
-        payday_tengill: b.payday_tengill || "",
-        dropbox_slod: b.dropbox_slod || "",
-        mottekid: b.mottekid || "",
-        skilad: b.skilad || "",
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    res.json({ id: data.id, message: "Verkefni búið til" });
+        b.tonlist_titill || "",
+        b.tonlist_heimild || "",
+        b.tonlist_url || "",
+        b.tonlist_kostnadur || 0,
+        b.stada || "Í vinnslu",
+        b.athugasemdir || "",
+        b.payday_tengill || "",
+        b.dropbox_slod || "",
+        b.mottekid || "",
+        b.skilad || "",
+      ],
+    );
+    res.json({ id: result.lastInsertRowid, message: "Verkefni búið til" });
   } catch (err) {
-    handleApiError(res, err);
+    res.status(500).json({ error: err.message });
   }
 });
 
-/**
- * PUT /api/verkefni/:id
- * Uppfæra verkefni
- */
+// Mynd upload - base64
+app.post(
+  "/api/verkefni/:id/mynd",
+  express.json({ limit: "10mb" }),
+  async (req, res) => {
+    try {
+      const { mynd } = req.body;
+      if (!mynd) return res.status(400).json({ error: "Enga mynd" });
+
+      await dbRun(
+        "UPDATE verkefni SET mynd = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        [mynd, req.params.id],
+      );
+      res.json({ message: "Mynd vistuð" });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  },
+);
+
 app.put("/api/verkefni/:id", async (req, res) => {
   try {
-    const supabase = getSupabaseForUser(req);
+    const userId = req.user?.id;
+    const isAdmin = req.user?.is_admin === 1;
+
+    // Check ownership
+    const verkefni = await dbGet("SELECT user_id FROM verkefni WHERE id = ?", [req.params.id]);
+    if (!verkefni) {
+      return res.status(404).json({ error: "Verkefni fannst ekki" });
+    }
+    if (!isAdmin && verkefni.user_id && verkefni.user_id !== userId) {
+      return res.status(403).json({ error: "Þú hefur ekki aðgang að þessu verkefni" });
+    }
+
     const b = req.body;
-    const google_doc_id = extractGoogleDocId(b.google_doc_url);
+    let google_doc_id = "";
+    if (b.google_doc_url) {
+      const match = b.google_doc_url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+      if (match) google_doc_id = match[1];
+    }
 
-    const { error } = await supabase
-      .from("verkefni")
-      .update({
-        nafn: b.nafn || "",
-        mynd: b.mynd || "",
-        framleidsla: b.framleidsla || "",
-        produser: b.produser || "",
-        produser_simi: b.produser_simi || "",
-        produser_netfang: b.produser_netfang || "",
-        stofa: b.stofa || "",
-        tengill_nafn: b.tengill_nafn || "",
-        tengill_simi: b.tengill_simi || "",
-        tengill_netfang: b.tengill_netfang || "",
-        art_director: b.art_director || "",
-        art_director_simi: b.art_director_simi || "",
-        copywriter: b.copywriter || "",
-        copywriter_simi: b.copywriter_simi || "",
-        lesari: b.lesari || "",
-        handrit: b.handrit || "",
-        google_doc_url: b.google_doc_url || "",
+    await dbRun(
+      `
+      UPDATE verkefni SET nafn=?, mynd=?, framleidsla=?, produser=?, produser_simi=?, produser_netfang=?,
+        stofa=?, tengill_nafn=?, tengill_simi=?, tengill_netfang=?, art_director=?, art_director_simi=?,
+        copywriter=?, copywriter_simi=?, lesari=?, handrit=?, google_doc_url=?, google_doc_id=?,
+        tonlist_titill=?, tonlist_heimild=?, tonlist_url=?, tonlist_kostnadur=?,
+        stada=?, athugasemdir=?, payday_tengill=?, dropbox_slod=?, mottekid=?, skilad=?, updated_at=CURRENT_TIMESTAMP
+      WHERE id=?
+    `,
+      [
+        b.nafn || "",
+        b.mynd || "",
+        b.framleidsla || "",
+        b.produser || "",
+        b.produser_simi || "",
+        b.produser_netfang || "",
+        b.stofa || "",
+        b.tengill_nafn || "",
+        b.tengill_simi || "",
+        b.tengill_netfang || "",
+        b.art_director || "",
+        b.art_director_simi || "",
+        b.copywriter || "",
+        b.copywriter_simi || "",
+        b.lesari || "",
+        b.handrit || "",
+        b.google_doc_url || "",
         google_doc_id,
-        tonlist_titill: b.tonlist_titill || "",
-        tonlist_heimild: b.tonlist_heimild || "",
-        tonlist_url: b.tonlist_url || "",
-        tonlist_kostnadur: b.tonlist_kostnadur || 0,
-        stada: b.stada || "Í vinnslu",
-        athugasemdir: b.athugasemdir || "",
-        payday_tengill: b.payday_tengill || "",
-        dropbox_slod: b.dropbox_slod || "",
-        mottekid: b.mottekid || "",
-        skilad: b.skilad || "",
-      })
-      .eq("id", req.params.id);
-
-    if (error) throw error;
+        b.tonlist_titill || "",
+        b.tonlist_heimild || "",
+        b.tonlist_url || "",
+        b.tonlist_kostnadur || 0,
+        b.stada || "Í vinnslu",
+        b.athugasemdir || "",
+        b.payday_tengill || "",
+        b.dropbox_slod || "",
+        b.mottekid || "",
+        b.skilad || "",
+        req.params.id,
+      ],
+    );
     res.json({ message: "Verkefni uppfært" });
   } catch (err) {
-    handleApiError(res, err);
+    res.status(500).json({ error: err.message });
   }
 });
 
-/**
- * DELETE /api/verkefni/:id
- * Eyða verkefni og tengdum gögnum
- */
 app.delete("/api/verkefni/:id", async (req, res) => {
   try {
-    const supabase = getSupabaseForUser(req);
-    const id = req.params.id;
+    const userId = req.user?.id;
+    const isAdmin = req.user?.is_admin === 1;
 
-    // Eyða tengdum gögnum (ef cascade virkar ekki)
-    await supabase.from("timaskraning").delete().eq("verkefni_id", id);
-    await supabase.from("adkeypt").delete().eq("verkefni_id", id);
+    // Check ownership
+    const verkefni = await dbGet("SELECT user_id FROM verkefni WHERE id = ?", [req.params.id]);
+    if (!verkefni) {
+      return res.status(404).json({ error: "Verkefni fannst ekki" });
+    }
+    if (!isAdmin && verkefni.user_id && verkefni.user_id !== userId) {
+      return res.status(403).json({ error: "Þú hefur ekki aðgang að þessu verkefni" });
+    }
 
-    const { error } = await supabase.from("verkefni").delete().eq("id", id);
-
-    if (error) throw error;
+    await dbRun("DELETE FROM timaskraning WHERE verkefni_id = ?", [req.params.id]);
+    await dbRun("DELETE FROM adkeypt WHERE verkefni_id = ?", [req.params.id]);
+    await dbRun("DELETE FROM verkefni WHERE id = ?", [req.params.id]);
     res.json({ message: "Verkefni eytt" });
   } catch (err) {
-    handleApiError(res, err);
+    res.status(500).json({ error: err.message });
   }
 });
 
-/**
- * POST /api/verkefni/:id/mynd
- * Uppfæra mynd verkefnis
- */
-app.post("/api/verkefni/:id/mynd", async (req, res) => {
-  try {
-    const supabase = getSupabaseForUser(req);
-    const { mynd } = req.body;
-
-    if (!mynd) {
-      return res.status(400).json({ error: "Enga mynd" });
-    }
-
-    const { error } = await supabase
-      .from("verkefni")
-      .update({ mynd, updated_at: new Date().toISOString() })
-      .eq("id", req.params.id);
-
-    if (error) throw error;
-    res.json({ message: "Mynd vistuð" });
-  } catch (err) {
-    handleApiError(res, err);
-  }
-});
-
-// ============================================================================
-// API ROUTES - TÍMASKRÁNING
-// ============================================================================
-
-/**
- * GET /api/verkefni/:id/timi
- * Sækja allar tímaskráningar fyrir verkefni
- */
+// API - Tímaskráning
 app.get("/api/verkefni/:id/timi", async (req, res) => {
   try {
-    const supabase = getSupabaseForUser(req);
-
-    const { data, error } = await supabase
-      .from("timaskraning")
-      .select("*")
-      .eq("verkefni_id", req.params.id)
-      .order("dagsetning", { ascending: false });
-
-    if (error) throw error;
-    res.json(data);
+    const timi = await dbAll(
+      "SELECT * FROM timaskraning WHERE verkefni_id = ? ORDER BY dagsetning DESC",
+      [req.params.id],
+    );
+    res.json(timi);
   } catch (err) {
-    handleApiError(res, err);
+    res.status(500).json({ error: err.message });
   }
 });
 
-/**
- * POST /api/verkefni/:id/timi
- * Bæta við tímaskráningu
- */
 app.post("/api/verkefni/:id/timi", async (req, res) => {
   try {
-    const supabase = getSupabaseForUser(req);
     const { tegund, titill, lysing, timi_minutur, dagsetning } = req.body;
-
-    const { data, error } = await supabase
-      .from("timaskraning")
-      .insert({
-        verkefni_id: req.params.id,
-        tegund: tegund || "",
-        titill: titill || "",
-        lysing: lysing || "",
-        timi_minutur: timi_minutur || 0,
-        dagsetning: dagsetning || "",
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-    res.json({ id: data.id, message: "Tímaskráning bætt við" });
+    const result = await dbRun(
+      `
+      INSERT INTO timaskraning (verkefni_id, tegund, titill, lysing, timi_minutur, dagsetning)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `,
+      [
+        req.params.id,
+        tegund || "",
+        titill || "",
+        lysing || "",
+        timi_minutur || 0,
+        dagsetning || "",
+      ],
+    );
+    res.json({ id: result.lastInsertRowid, message: "Tímaskráning bætt við" });
   } catch (err) {
-    handleApiError(res, err);
+    res.status(500).json({ error: err.message });
   }
 });
 
-/**
- * DELETE /api/timi/:id
- * Eyða tímaskráningu
- */
 app.delete("/api/timi/:id", async (req, res) => {
   try {
-    const supabase = getSupabaseForUser(req);
-
-    const { error } = await supabase
-      .from("timaskraning")
-      .delete()
-      .eq("id", req.params.id);
-
-    if (error) throw error;
+    await dbRun("DELETE FROM timaskraning WHERE id = ?", [req.params.id]);
     res.json({ message: "Tímaskráning eytt" });
   } catch (err) {
-    handleApiError(res, err);
+    res.status(500).json({ error: err.message });
   }
 });
 
-// ============================================================================
-// API ROUTES - AÐKEYPT TÓNLIST
-// ============================================================================
-
-/**
- * GET /api/verkefni/:id/adkeypt
- * Sækja aðkeypta tónlist fyrir verkefni
- */
-app.get("/api/verkefni/:id/adkeypt", async (req, res) => {
-  try {
-    const supabase = getSupabaseForUser(req);
-
-    const { data, error } = await supabase
-      .from("adkeypt")
-      .select("*")
-      .eq("verkefni_id", req.params.id)
-      .order("created_at", { ascending: false });
-
-    if (error) throw error;
-    res.json(data);
-  } catch (err) {
-    handleApiError(res, err);
-  }
-});
-
-/**
- * POST /api/verkefni/:id/adkeypt
- * Bæta við aðkeyptri tónlist
- */
-app.post("/api/verkefni/:id/adkeypt", async (req, res) => {
-  try {
-    const supabase = getSupabaseForUser(req);
-    const { titill, heimild, url, kostnadur } = req.body;
-
-    const { data, error } = await supabase
-      .from("adkeypt")
-      .insert({
-        verkefni_id: req.params.id,
-        titill: titill || "",
-        heimild: heimild || "",
-        url: url || "",
-        kostnadur: kostnadur || 0,
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-    res.json({ id: data.id, message: "Lagi bætt við" });
-  } catch (err) {
-    handleApiError(res, err);
-  }
-});
-
-/**
- * DELETE /api/adkeypt/:id
- * Eyða aðkeyptri tónlist
- */
-app.delete("/api/adkeypt/:id", async (req, res) => {
-  try {
-    const supabase = getSupabaseForUser(req);
-
-    const { error } = await supabase
-      .from("adkeypt")
-      .delete()
-      .eq("id", req.params.id);
-
-    if (error) throw error;
-    res.json({ message: "Lagi eytt" });
-  } catch (err) {
-    handleApiError(res, err);
-  }
-});
-
-// ============================================================================
-// API ROUTES - LOOKUP TABLES
-// ============================================================================
-
-/**
- * GET /api/stofur
- * Sækja lista af auglýsingastofum
- */
+// API - Stofur og Framleiðsla
 app.get("/api/stofur", async (req, res) => {
   try {
-    const supabase = getSupabase();
-    const { data, error } = await supabase
-      .from("auglysingar_stofur")
-      .select("*")
-      .order("nafn");
-
-    if (error) throw error;
-    res.json(data);
+    res.json(await dbAll("SELECT * FROM auglysingar_stofur ORDER BY nafn"));
   } catch (err) {
-    handleApiError(res, err);
+    res.status(500).json({ error: err.message });
   }
 });
 
-/**
- * GET /api/framleidsla
- * Sækja lista af framleiðslufyrirtækjum
- */
 app.get("/api/framleidsla", async (req, res) => {
   try {
-    const supabase = getSupabase();
-    const { data, error } = await supabase
-      .from("framleidsla")
-      .select("*")
-      .order("nafn");
-
-    if (error) throw error;
-    res.json(data);
+    res.json(await dbAll("SELECT * FROM framleidsla ORDER BY nafn"));
   } catch (err) {
-    handleApiError(res, err);
+    res.status(500).json({ error: err.message });
   }
 });
 
-// ============================================================================
-// API ROUTES - LEIT
-// ============================================================================
-
-/**
- * GET /api/search
- * Leita í handritum
- * Query params: q, lesari, stofa, stada, from, to
- */
-app.get("/api/search", async (req, res) => {
+// API - Aðkeypt tónlist
+app.get("/api/verkefni/:id/adkeypt", async (req, res) => {
   try {
-    const supabase = getSupabaseForUser(req);
-    const { q, lesari, stofa, stada, from, to } = req.query;
-
-    if (!q || q.trim().length < 2) {
-      return res.json([]);
-    }
-
-    let query = supabase
-      .from("verkefni")
-      .select("id, nafn, lesari, stofa, stada, handrit, mottekid, skilad, created_at")
-      .ilike("handrit", `%${q.trim()}%`);
-
-    if (lesari) query = query.ilike("lesari", `%${lesari}%`);
-    if (stofa) query = query.ilike("stofa", `%${stofa}%`);
-    if (stada) query = query.eq("stada", stada);
-    if (from) query = query.or(`mottekid.gte.${from},created_at.gte.${from}`);
-    if (to) query = query.or(`mottekid.lte.${to},created_at.lte.${to}`);
-
-    const { data, error } = await query
-      .order("created_at", { ascending: false })
-      .limit(100);
-
-    if (error) throw error;
-    res.json(data);
+    const adkeypt = await dbAll(
+      "SELECT * FROM adkeypt WHERE verkefni_id = ? ORDER BY created_at DESC",
+      [req.params.id],
+    );
+    res.json(adkeypt);
   } catch (err) {
-    handleApiError(res, err);
+    res.status(500).json({ error: err.message });
   }
 });
 
-// ============================================================================
-// API ROUTES - BOOTH
-// ============================================================================
-
-/**
- * GET /api/booth/state
- * Sækja núverandi booth state
- */
-app.get("/api/booth/state", (req, res) => {
-  res.json(currentBoothState);
-});
-
-/**
- * POST /api/booth/send
- * Senda handrit í booth
- */
-app.post("/api/booth/send", async (req, res) => {
-  const { nafn, handrit, lesari, take, googleDocId } = req.body;
-
+app.post("/api/verkefni/:id/adkeypt", async (req, res) => {
   try {
-    await broadcastToBooth({
-      type: "handrit",
-      nafn,
-      handrit,
-      lesari,
-      googleDocId,
-      take: take || 1,
-    });
-    res.json({ message: "Sent í booth" });
+    const { titill, heimild, url, kostnadur } = req.body;
+    const result = await dbRun(
+      `
+      INSERT INTO adkeypt (verkefni_id, titill, heimild, url, kostnadur)
+      VALUES (?, ?, ?, ?, ?)
+    `,
+      [req.params.id, titill || "", heimild || "", url || "", kostnadur || 0],
+    );
+    res.json({ id: result.lastInsertRowid, message: "Lagi bætt við" });
   } catch (err) {
-    console.error("Booth send error:", err);
-    res.status(500).json({ error: "Failed to send to booth" });
+    res.status(500).json({ error: err.message });
   }
 });
 
-/**
- * GET /api/ably-token
- * Sækja Ably token fyrir client (production only)
- */
-app.get("/api/ably-token", async (req, res) => {
-  if (!isProduction || !ablyRest) {
-    return res.status(400).json({ error: "Ably not available in development mode" });
-  }
-
+app.delete("/api/adkeypt/:id", async (req, res) => {
   try {
-    const tokenRequest = await ablyRest.auth.createTokenRequest({
-      capability: { booth: ["subscribe", "history"] },
-    });
-    res.json(tokenRequest);
+    await dbRun("DELETE FROM adkeypt WHERE id = ?", [req.params.id]);
+    res.json({ message: "Lagi eytt" });
   } catch (err) {
-    console.error("Ably token error:", err);
-    res.status(500).json({ error: "Failed to create token" });
+    res.status(500).json({ error: err.message });
   }
 });
 
-// ============================================================================
-// API ROUTES - GOOGLE DOCS
-// ============================================================================
-
-/**
- * GET /api/google-doc/:docId
- * Sækja efni úr Google Doc (verður að vera public)
- */
-app.get("/api/google-doc/:docId", async (req, res) => {
-  try {
-    const url = `https://docs.google.com/document/d/${req.params.docId}/export?format=txt`;
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      return res.status(response.status).json({
-        error: 'Villa við að sækja skjal - athugaðu að það sé opið fyrir "Anyone with the link"',
-      });
-    }
-
-    const content = await response.text();
-    res.json({ content });
-  } catch (err) {
-    console.error("Google Doc villa:", err.message);
-    res.status(500).json({ error: "Villa við að sækja skjal: " + err.message });
-  }
-});
-
-// ============================================================================
-// API ROUTES - PDF SKÝRSLA
-// ============================================================================
-
-/**
- * GET /api/verkefni/:id/pdf
- * Búa til HTML tímaskýrslu (printable)
- */
+// API - PDF
 app.get("/api/verkefni/:id/pdf", async (req, res) => {
   try {
-    const supabase = getSupabaseForUser(req);
-    const id = req.params.id;
+    const v = await dbGet("SELECT * FROM verkefni WHERE id = ?", [
+      req.params.id,
+    ]);
+    if (!v) return res.status(404).send("Verkefni fannst ekki");
 
-    // Sækja verkefni
-    const { data: v, error: vErr } = await supabase
-      .from("verkefni")
-      .select("*")
-      .eq("id", id)
-      .single();
+    const timi = await dbAll(
+      "SELECT * FROM timaskraning WHERE verkefni_id = ? ORDER BY dagsetning",
+      [req.params.id],
+    );
+    const adkeypt = await dbAll(
+      "SELECT * FROM adkeypt WHERE verkefni_id = ? ORDER BY created_at",
+      [req.params.id],
+    );
 
-    if (vErr || !v) {
-      return res.status(404).send("Verkefni fannst ekki");
-    }
-
-    // Sækja tengd gögn
-    const { data: timi } = await supabase
-      .from("timaskraning")
-      .select("*")
-      .eq("verkefni_id", id)
-      .order("dagsetning");
-
-    const { data: adkeypt } = await supabase
-      .from("adkeypt")
-      .select("*")
-      .eq("verkefni_id", id)
-      .order("created_at");
-
-    // Reikna samtölur
-    const timiList = timi || [];
-    const adkeyptList = adkeypt || [];
-
-    const totalMin = timiList
+    const totalMin = timi
       .filter((t) => t.tegund === "timi")
       .reduce((s, t) => s + (t.timi_minutur || 0), 0);
-    const totalSimtol = timiList.filter((t) => t.tegund === "simtal").length;
-    const totalEmail = timiList.filter((t) => t.tegund === "email").length;
-    const totalFundir = timiList.filter((t) => t.tegund === "fundur").length;
-    const totalAdkeypt = adkeyptList.reduce((s, a) => s + (a.kostnadur || 0), 0);
+    const totalSimtol = timi.filter((t) => t.tegund === "simtal").length;
+    const totalEmail = timi.filter((t) => t.tegund === "email").length;
+    const totalFundir = timi.filter((t) => t.tegund === "fundur").length;
+    const totalAdkeypt = adkeypt.reduce((s, a) => s + (a.kostnadur || 0), 0);
 
-    // Búa til HTML
-    const html = generatePdfHtml(v, timiList, adkeyptList, {
-      totalMin,
-      totalSimtol,
-      totalEmail,
-      totalFundir,
-      totalAdkeypt,
-    });
-
-    res.setHeader("Content-Type", "text/html");
-    res.send(html);
-  } catch (err) {
-    handleApiError(res, err);
-  }
-});
-
-/**
- * Búa til HTML fyrir PDF skýrslu
- */
-function generatePdfHtml(v, timi, adkeypt, totals) {
-  return `<!DOCTYPE html>
+    const html = `
+<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
@@ -992,47 +697,174 @@ function generatePdfHtml(v, timi, adkeypt, totals) {
   </table>
 
   <div class="totals">
-    <div class="total-item"><div class="total-value">${totals.totalMin}</div><div class="total-label">mínútur</div></div>
-    <div class="total-item"><div class="total-value">${totals.totalSimtol}</div><div class="total-label">símtöl</div></div>
-    <div class="total-item"><div class="total-value">${totals.totalEmail}</div><div class="total-label">email</div></div>
-    <div class="total-item"><div class="total-value">${totals.totalFundir}</div><div class="total-label">fundir</div></div>
+    <div class="total-item"><div class="total-value">${totalMin}</div><div class="total-label">mínútur</div></div>
+    <div class="total-item"><div class="total-value">${totalSimtol}</div><div class="total-label">símtöl</div></div>
+    <div class="total-item"><div class="total-value">${totalEmail}</div><div class="total-label">email</div></div>
+    <div class="total-item"><div class="total-value">${totalFundir}</div><div class="total-label">fundir</div></div>
   </div>
 
-  ${adkeypt.length > 0 ? `
+  ${
+    adkeypt.length > 0
+      ? `
   <h2>Aðkeypt tónlist</h2>
   <table>
     <tr><th>Titill</th><th>Heimild</th><th style="text-align:right;">Kostnaður</th></tr>
     ${adkeypt.map((a) => `<tr><td>${a.titill || "—"}</td><td>${a.heimild || "—"}</td><td style="text-align:right;">${a.kostnadur ? a.kostnadur.toLocaleString("is-IS") + " kr" : "—"}</td></tr>`).join("")}
   </table>
-  <div class="cost-total">Samtals aðkeypt: ${totals.totalAdkeypt.toLocaleString("is-IS")} kr</div>
-  ` : ""}
+  <div class="cost-total">Samtals aðkeypt: ${totalAdkeypt.toLocaleString("is-IS")} kr</div>
+  `
+      : ""
+  }
 
   <div class="footer">Bessi - Audioland • ${new Date().toLocaleDateString("is-IS")}</div>
 </body>
 </html>`;
-}
 
-// ============================================================================
-// SPA FALLBACK
-// ============================================================================
-
-/**
- * Fallback route - serve index.html for client-side routing
- */
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+    res.setHeader("Content-Type", "text/html");
+    res.send(html);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// ============================================================================
-// START SERVER
-// ============================================================================
+// Google Docs API - fetches public docs via export URL
+app.get("/api/google-doc/:docId", async (req, res) => {
+  try {
+    const url = `https://docs.google.com/document/d/${req.params.docId}/export?format=txt`;
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      return res
+        .status(response.status)
+        .json({
+          error:
+            'Villa við að sækja skjal - athugaðu að það sé opið fyrir "Anyone with the link"',
+        });
+    }
+
+    const content = await response.text();
+    res.json({ content });
+  } catch (err) {
+    console.error("Google Doc villa:", err.message);
+    res.status(500).json({ error: "Villa við að sækja skjal: " + err.message });
+  }
+});
+
+// Ably token auth for clients (production only)
+app.get("/api/ably-token", async (req, res) => {
+  if (!isProduction || !ablyRest) {
+    return res
+      .status(400)
+      .json({ error: "Ably not available in development mode" });
+  }
+
+  try {
+    const tokenRequest = await ablyRest.auth.createTokenRequest({
+      capability: { booth: ["subscribe", "history"] },
+    });
+    res.json(tokenRequest);
+  } catch (err) {
+    console.error("Ably token error:", err);
+    res.status(500).json({ error: "Failed to create token" });
+  }
+});
+
+// Get current booth state
+app.get("/api/booth/state", (req, res) => {
+  res.json(currentBoothState);
+});
+
+// Config endpoint - tells client whether to use Ably or WebSocket
+app.get("/api/config", (req, res) => {
+  res.json({
+    useAbly: isProduction && !!process.env.ABLY_API_KEY,
+    nodeEnv: process.env.NODE_ENV || "development",
+  });
+});
+
+// Senda í booth
+app.post("/api/booth/send", async (req, res) => {
+  const { nafn, handrit, lesari, take, googleDocId } = req.body;
+  try {
+    await broadcastToBooth({
+      type: "handrit",
+      nafn,
+      handrit,
+      lesari,
+      googleDocId,
+      take: take || 1,
+    });
+    res.json({ message: "Sent í booth" });
+  } catch (err) {
+    console.error("Booth send error:", err);
+    res.status(500).json({ error: "Failed to send to booth" });
+  }
+});
+
+// Search API - full text search in transcripts
+app.get("/api/search", async (req, res) => {
+  try {
+    const { q, lesari, stofa, stada, from, to } = req.query;
+    const userId = req.user?.id;
+    const isAdmin = req.user?.is_admin === 1;
+
+    if (!q || q.trim().length < 2) {
+      return res.json([]);
+    }
+
+    const searchTerm = `%${q.trim()}%`;
+    let sql = `
+      SELECT id, nafn, lesari, stofa, stada, handrit, mottekid, skilad, created_at
+      FROM verkefni
+      WHERE handrit LIKE ?
+    `;
+    const params = [searchTerm];
+
+    // Filter by user unless admin
+    if (!isAdmin) {
+      sql += " AND (user_id = ? OR user_id IS NULL)";
+      params.push(userId);
+    }
+
+    if (lesari) {
+      sql += " AND lesari LIKE ?";
+      params.push(`%${lesari}%`);
+    }
+    if (stofa) {
+      sql += " AND stofa LIKE ?";
+      params.push(`%${stofa}%`);
+    }
+    if (stada) {
+      sql += " AND stada = ?";
+      params.push(stada);
+    }
+    if (from) {
+      sql += " AND (mottekid >= ? OR created_at >= ?)";
+      params.push(from, from);
+    }
+    if (to) {
+      sql += " AND (mottekid <= ? OR created_at <= ?)";
+      params.push(to, to);
+    }
+
+    sql += " ORDER BY created_at DESC LIMIT 100";
+
+    const results = await dbAll(sql, params);
+    res.json(results);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Start
+const PORT = process.env.PORT || 3001;
 
 initDatabase()
   .then(() => {
     server.listen(PORT, () => {
-      console.log(`🐕 Bessi keyrir á http://localhost:${PORT}`);
-      console.log(`   Mode: ${process.env.NODE_ENV || "development"}`);
-      console.log(`   Database: Supabase`);
+      console.log("🐕 Bessi keyrir á http://localhost:" + PORT);
+      console.log("   Mode:", process.env.NODE_ENV || "development");
+      console.log("   Database:", isUsingTurso() ? "Turso" : "SQLite");
     });
   })
   .catch((err) => {

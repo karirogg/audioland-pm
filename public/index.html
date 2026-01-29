@@ -1036,7 +1036,7 @@
           <span class="user-status">●</span>
           <span id="userName"></span>
         </span>
-        <button class="btn btn-ghost" id="logoutBtn" style="display:none;" title="Útskrá" onclick="logout()">Útskrá</button>
+        <a href="/auth/logout" class="btn btn-ghost" id="logoutBtn" style="display:none;" title="Útskrá">Útskrá</a>
         <button
           class="btn btn-ghost"
           id="darkModeBtn"
@@ -1494,7 +1494,6 @@
       </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
       let verkefni = [];
       let currentFilter = "all";
@@ -1508,22 +1507,6 @@
       let currentVerkefniId = null;
       let useAbly = false;
       let googleDocPollInterval = null;
-      let sbClient = null;
-      let currentSession = null;
-
-      // Get auth header for API calls
-      function getAuthHeaders() {
-        if (!currentSession?.access_token) return {};
-        return {
-          'Authorization': 'Bearer ' + currentSession.access_token
-        };
-      }
-
-      // Fetch with auth
-      async function authFetch(url, options = {}) {
-        const headers = { ...getAuthHeaders(), ...(options.headers || {}) };
-        return fetch(url, { ...options, headers });
-      }
 
       async function initConnection() {
         try {
@@ -1558,7 +1541,7 @@
 
       async function saekjaVerkefni() {
         try {
-          const res = await authFetch("/api/verkefni");
+          const res = await fetch("/api/verkefni");
           verkefni = await res.json();
           birtaVerkefni();
         } catch (err) {
@@ -1709,7 +1692,7 @@
         isLoadingProject = true;
         if (saveTimeout) clearTimeout(saveTimeout);
         try {
-          const res = await authFetch("/api/verkefni", {
+          const res = await fetch("/api/verkefni", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ nafn: "Nýtt verkefni", stada: "Í vinnslu" }),
@@ -1767,7 +1750,7 @@
         }
 
         try {
-          const res = await authFetch("/api/verkefni/" + currentVerkefniId, {
+          const res = await fetch("/api/verkefni/" + currentVerkefniId, {
             method: "DELETE",
           });
           if (res.ok) {
@@ -1785,7 +1768,7 @@
         isLoadingProject = true;
         if (saveTimeout) clearTimeout(saveTimeout);
         try {
-          const res = await authFetch("/api/verkefni/" + id);
+          const res = await fetch("/api/verkefni/" + id);
           const v = await res.json();
           currentVerkefniId = id;
 
@@ -1900,7 +1883,7 @@
         if (myndBase64) data.mynd = myndBase64;
 
         try {
-          await authFetch("/api/verkefni/" + currentVerkefniId, {
+          await fetch("/api/verkefni/" + currentVerkefniId, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data),
@@ -2011,7 +1994,7 @@
       async function sendaTilBooth(event, verkefniId) {
         event.stopPropagation(); // Ekki opna modal
         try {
-          const res = await authFetch("/api/verkefni/" + verkefniId);
+          const res = await fetch("/api/verkefni/" + verkefniId);
           const v = await res.json();
 
           let googleDocId = null;
@@ -2021,7 +2004,7 @@
           }
 
           if (useAbly) {
-            await authFetch("/api/booth/send", {
+            await fetch("/api/booth/send", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -2068,7 +2051,7 @@
         if (useAbly) {
           // Production: use HTTP POST (server will broadcast via Ably)
           try {
-            await authFetch("/api/booth/send", {
+            await fetch("/api/booth/send", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -2155,7 +2138,7 @@
 
       async function saekjaTimaskraningar(verkefniId) {
         try {
-          const res = await authFetch("/api/verkefni/" + verkefniId + "/timi");
+          const res = await fetch("/api/verkefni/" + verkefniId + "/timi");
           tempTimaSkraningar = await res.json();
           birtaTimaSkraningar();
         } catch (err) {
@@ -2216,7 +2199,7 @@
             parseInt(document.getElementById("time_minutur").value) || 0,
         };
         try {
-          await authFetch("/api/verkefni/" + currentVerkefniId + "/timi", {
+          await fetch("/api/verkefni/" + currentVerkefniId + "/timi", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data),
@@ -2233,7 +2216,7 @@
       async function eydaTima(id) {
         if (!confirm("Eyða færslu?")) return;
         try {
-          await authFetch("/api/timi/" + id, { method: "DELETE" });
+          await fetch("/api/timi/" + id, { method: "DELETE" });
           await saekjaTimaskraningar(currentVerkefniId);
         } catch (err) {
           console.error(err);
@@ -2247,7 +2230,7 @@
 
       async function saekjaAdkeypt(verkefniId) {
         try {
-          const res = await authFetch("/api/verkefni/" + verkefniId + "/adkeypt");
+          const res = await fetch("/api/verkefni/" + verkefniId + "/adkeypt");
           tempAdkeypt = await res.json();
           birtaAdkeypt();
         } catch (err) {
@@ -2303,7 +2286,7 @@
             parseInt(document.getElementById("music_kostnadur").value) || 0,
         };
         try {
-          await authFetch("/api/verkefni/" + currentVerkefniId + "/adkeypt", {
+          await fetch("/api/verkefni/" + currentVerkefniId + "/adkeypt", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data),
@@ -2322,7 +2305,7 @@
       async function eydaLagi(id) {
         if (!confirm("Eyða lagi?")) return;
         try {
-          await authFetch("/api/adkeypt/" + id, { method: "DELETE" });
+          await fetch("/api/adkeypt/" + id, { method: "DELETE" });
           await saekjaAdkeypt(currentVerkefniId);
         } catch (err) {
           console.error(err);
@@ -2379,69 +2362,27 @@
         }
       }
 
-      // Initialize Supabase and check auth
-      async function initAuth() {
+      // Fetch current user
+      async function fetchUser() {
         try {
-          const configRes = await fetch('/api/config');
-          const config = await configRes.json();
-
-          if (!config.supabaseUrl || !config.supabaseAnonKey) {
-            console.error('Supabase ekki stillt');
-            window.location.href = '/login.html';
-            return;
-          }
-
-          sbClient = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
-
-          // Check session
-          const { data: { session }, error } = await sbClient.auth.getSession();
-
-          if (!session) {
-            window.location.href = '/login.html';
-            return;
-          }
-
-          currentSession = session;
-
-          // Get user profile
-          const userRes = await authFetch('/api/auth/user');
-          const userData = await userRes.json();
-
-          if (userData.user) {
-            document.getElementById('userName').textContent = userData.user.name || userData.user.email;
+          const res = await fetch('/auth/user', { credentials: 'include' });
+          const data = await res.json();
+          if (data.user) {
+            document.getElementById('userName').textContent = data.user.name || data.user.email;
             document.getElementById('userInfo').style.display = 'flex';
             document.getElementById('logoutBtn').style.display = 'flex';
           }
-
-          // Listen for auth changes
-          sbClient.auth.onAuthStateChange((event, session) => {
-            if (event === 'SIGNED_OUT' || !session) {
-              window.location.href = '/login.html';
-            }
-            currentSession = session;
-          });
-
-          // Load data
-          saekjaVerkefni();
-          saekjaStofur();
-          saekjaFramleidslu();
         } catch (err) {
-          console.error('Auth villa:', err);
-          window.location.href = '/login.html';
+          console.error('Villa við að sækja notanda:', err);
         }
       }
 
-      // Logout
-      async function logout() {
-        if (supabase) {
-          await sbClient.auth.signOut();
-        }
-        window.location.href = '/login.html';
-      }
-
-      initAuth();
+      fetchUser();
       initDarkMode();
       initView();
+      saekjaVerkefni();
+      saekjaStofur();
+      saekjaFramleidslu();
 
       // Check for ?open= parameter to open project directly
       const urlParams = new URLSearchParams(window.location.search);

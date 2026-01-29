@@ -508,58 +508,8 @@
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     let currentQuery = '';
-    let sbClient = null;
-    let currentSession = null;
-
-    // Get auth header for API calls
-    function getAuthHeaders() {
-      if (!currentSession?.access_token) return {};
-      return {
-        'Authorization': 'Bearer ' + currentSession.access_token
-      };
-    }
-
-    // Fetch with auth
-    async function authFetch(url, options = {}) {
-      const headers = { ...getAuthHeaders(), ...(options.headers || {}) };
-      return fetch(url, { ...options, headers });
-    }
-
-    // Initialize Supabase and check auth
-    async function initAuth() {
-      try {
-        const configRes = await fetch('/api/config');
-        const config = await configRes.json();
-
-        if (!config.supabaseUrl || !config.supabaseAnonKey) {
-          window.location.href = '/login.html';
-          return;
-        }
-
-        sbClient = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
-
-        const { data: { session } } = await sbClient.auth.getSession();
-        if (!session) {
-          window.location.href = '/login.html';
-          return;
-        }
-
-        currentSession = session;
-
-        sbClient.auth.onAuthStateChange((event, session) => {
-          if (event === 'SIGNED_OUT' || !session) {
-            window.location.href = '/login.html';
-          }
-          currentSession = session;
-        });
-      } catch (err) {
-        console.error('Auth villa:', err);
-        window.location.href = '/login.html';
-      }
-    }
 
     // Dark mode
     let isDarkMode = false;
@@ -626,7 +576,7 @@
       document.getElementById('resultsArea').innerHTML = '<div class="loading">Leita...</div>';
 
       try {
-        const res = await authFetch('/api/search?' + params.toString());
+        const res = await fetch('/api/search?' + params.toString());
         const results = await res.json();
         displayResults(results, q);
       } catch (err) {
@@ -752,7 +702,6 @@
     });
 
     initDarkMode();
-    initAuth();
   </script>
 </body>
 </html>
