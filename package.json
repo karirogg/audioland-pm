@@ -2,9 +2,9 @@
   "name": "audioland-verkefni",
   "version": "1.0.0",
   "description": "Verkefnastjórnun fyrir Audioland með booth-view",
-  "main": "server.js",
+  "main": "src/index.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node src/index.js"
   },
   "dependencies": {
     "@libsql/client": "^0.14.0",

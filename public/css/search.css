@@ -1,0 +1,251 @@
+/* search.css - Search page specific styles */
+
+.search-section {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  border: 1px solid var(--border);
+}
+
+.search-main {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.search-input {
+  flex: 1;
+  padding: 1rem 1.25rem;
+  font-size: 1.1rem;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  background: var(--input-bg);
+  color: var(--text);
+  font-family: inherit;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.search-btn {
+  padding: 1rem 2rem;
+  background: var(--accent);
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.search-btn:hover {
+  background: var(--accent-dim);
+}
+
+.filters {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.filter-group label {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.filter-group input,
+.filter-group select {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--input-bg);
+  color: var(--text);
+  font-size: 0.9rem;
+  min-width: 150px;
+}
+
+.filter-group input:focus,
+.filter-group select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  color: var(--text-dim);
+  font-size: 0.9rem;
+}
+
+.result-card {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.result-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 4px 12px var(--shadow);
+}
+
+.result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+}
+
+.result-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.result-meta {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  margin-bottom: 0.75rem;
+}
+
+.result-meta span {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.result-excerpt {
+  background: var(--bg-card-hover);
+  border-radius: 8px;
+  padding: 1rem;
+  font-family: 'Georgia', serif;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--text);
+  max-height: 150px;
+  overflow: hidden;
+  position: relative;
+}
+
+.result-excerpt::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  background: linear-gradient(transparent, var(--bg-card-hover));
+}
+
+.result-excerpt mark {
+  background: var(--accent);
+  color: #000;
+  padding: 0.1rem 0.2rem;
+  border-radius: 3px;
+}
+
+.loading {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-dim);
+}
+
+.keyboard-hint {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  margin-top: 0.5rem;
+}
+
+.keyboard-hint kbd {
+  background: var(--bg-card-hover);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  font-family: inherit;
+}
+
+.page-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+}
+
+/* Responsive - Mobile */
+@media (max-width: 768px) {
+  .search-section {
+    padding: 1rem;
+  }
+
+  .search-main {
+    flex-direction: column;
+  }
+
+  .search-input {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+
+  .search-btn {
+    width: 100%;
+  }
+
+  .filters {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .filter-group {
+    width: 100%;
+  }
+
+  .filter-group input,
+  .filter-group select {
+    width: 100%;
+    min-width: auto;
+    font-size: 16px;
+  }
+
+  .keyboard-hint {
+    display: none;
+  }
+
+  .result-card {
+    padding: 1rem;
+  }
+
+  .result-header {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .result-meta {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .result-excerpt {
+    font-size: 0.9rem;
+    max-height: 120px;
+  }
+
+  .page-title {
+    font-size: 1.4rem;
+  }
+}
