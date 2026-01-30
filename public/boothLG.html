@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Booth - LG</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #000;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      min-height: 100vh;
+      padding: 40px;
+    }
+    #nafn {
+      font-size: 24px;
+      color: #f5a623;
+      margin-bottom: 10px;
+      border-bottom: 2px solid #333;
+      padding-bottom: 10px;
+    }
+    #lesari {
+      font-size: 18px;
+      color: #888;
+      margin-bottom: 30px;
+    }
+    #handrit {
+      font-size: 42px;
+      line-height: 1.6;
+      text-align: center;
+      padding: 20px;
+    }
+    #handrit b, #handrit strong {
+      font-weight: bold;
+    }
+    #handrit i, #handrit em {
+      font-style: italic;
+    }
+    #standby {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 80vh;
+      font-size: 48px;
+      color: #444;
+    }
+    #status {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      font-size: 12px;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <div id="standby">Bessi - Booth</div>
+  <div id="content" style="display:none;">
+    <div id="nafn"></div>
+    <div id="lesari"></div>
+    <div id="handrit"></div>
+  </div>
+  <div id="status">...</div>
+
+  <script>
+    var lastHandrit = '';
+
+    function fetchState() {
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET', '/api/booth/state', true);
+      xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4) {
+          if (xhr.status === 200) {
+            try {
+              var data = JSON.parse(xhr.responseText);
+              updateDisplay(data);
+              document.getElementById('status').innerText = 'OK';
+            } catch (e) {
+              document.getElementById('status').innerText = 'Villa';
+            }
+          } else {
+            document.getElementById('status').innerText = 'Engin tenging';
+          }
+        }
+      };
+      xhr.send();
+    }
+
+    function updateDisplay(data) {
+      if (data.handrit && data.handrit !== '') {
+        document.getElementById('standby').style.display = 'none';
+        document.getElementById('content').style.display = 'block';
+        document.getElementById('nafn').innerText = data.nafn || '';
+        document.getElementById('lesari').innerText = data.lesari ? 'Lesari: ' + data.lesari : '';
+
+        if (data.handrit !== lastHandrit) {
+          document.getElementById('handrit').innerHTML = data.handrit;
+          lastHandrit = data.handrit;
+        }
+      } else {
+        document.getElementById('standby').style.display = 'flex';
+        document.getElementById('content').style.display = 'none';
+        lastHandrit = '';
+      }
+    }
+
+    // Poll every 2 seconds
+    fetchState();
+    setInterval(fetchState, 2000);
+  </script>
+</body>
+</html>
