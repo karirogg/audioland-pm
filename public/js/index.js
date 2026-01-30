@@ -231,7 +231,9 @@ async function nyttVerkefni() {
     document.getElementById('modalOverlay').classList.add('active');
     document.getElementById('modalNumber').textContent = '';
     document.getElementById('modalTitle').textContent = 'N\u00fdtt verkefni';
-    document.getElementById('sendaBoothBtn').style.display = 'none';
+    document.getElementById('stadaHeader').value = '\u00cd vinnslu';
+    updateStadaColor('\u00cd vinnslu');
+    document.getElementById('opnaBoothBtn').style.display = 'none';
     document.getElementById('eydaBtn').style.display = 'none';
     document.getElementById('verkefniForm').reset();
     document.getElementById('verkefniId').value = currentVerkefniId;
@@ -239,6 +241,7 @@ async function nyttVerkefni() {
     document.getElementById('myndBase64').value = '';
     document.getElementById('myndPreview').innerHTML = '';
     document.getElementById('saveStatus').textContent = '';
+    document.getElementById('handritEditor').innerHTML = '';
     stopGoogleDocPolling();
     tempTimaSkraningar = [];
     tempAdkeypt = [];
@@ -310,7 +313,9 @@ async function opnaVerkefni(id) {
     document.getElementById('modalOverlay').classList.add('active');
     document.getElementById('modalNumber').textContent = v.verkefnanumer || '';
     document.getElementById('modalTitle').textContent = v.nafn || 'Verkefni';
-    document.getElementById('sendaBoothBtn').style.display = 'inline-flex';
+    document.getElementById('stadaHeader').value = v.stada || '\u00cd vinnslu';
+    updateStadaColor(v.stada || '\u00cd vinnslu');
+    document.getElementById('opnaBoothBtn').style.display = 'inline-flex';
     document.getElementById('eydaBtn').style.display = 'inline-flex';
     document.getElementById('saveStatus').textContent = '';
 
@@ -319,6 +324,8 @@ async function opnaVerkefni(id) {
       'nafn',
       'stada',
       'lesari',
+      'lesari_simi',
+      'lesari_netfang',
       'mottekid',
       'skilad',
       'payday_tengill',
@@ -346,6 +353,9 @@ async function opnaVerkefni(id) {
       const el = document.getElementById(f);
       if (el) el.value = v[f] || '';
     });
+
+    // Sync handrit to editor
+    syncHiddenToEditor();
 
     document.getElementById('myndBase64').value = v.mynd || '';
     if (v.mynd) {
@@ -393,6 +403,8 @@ async function autosave() {
     'nafn',
     'stada',
     'lesari',
+    'lesari_simi',
+    'lesari_netfang',
     'mottekid',
     'skilad',
     'payday_tengill',
@@ -420,6 +432,8 @@ async function autosave() {
     const el = document.getElementById(f);
     if (el) data[f] = el.value;
   });
+  // Get stada from header select
+  data.stada = document.getElementById('stadaHeader').value;
 
   const myndBase64 = document.getElementById('myndBase64').value;
   if (myndBase64) data.mynd = myndBase64;
@@ -458,6 +472,7 @@ function startGoogleDocPolling(docId) {
         const currentText = document.getElementById('handrit').value;
         if (data.content && data.content !== currentText) {
           document.getElementById('handrit').value = data.content;
+          document.getElementById('handritEditor').innerHTML = data.content;
         }
       }
     } catch (err) {
@@ -537,7 +552,7 @@ async function sendaTilBooth(event, verkefniId) {
   }
 }
 
-async function sendaIBooth() {
+async function sendaIBooth(showAlert = false) {
   const nafn = document.getElementById('nafn').value;
   const handrit = document.getElementById('handrit').value;
   const lesari = document.getElementById('lesari').value;
@@ -561,7 +576,7 @@ async function sendaIBooth() {
           take: 1,
         }),
       });
-      alert('Sent \u00ed booth!');
+      if (showAlert) alert('Sent \u00ed booth!');
     } catch (err) {
       console.error('Villa vi\u00f0 a\u00f0 senda \u00ed booth:', err);
       alert('Villa vi\u00f0 a\u00f0 senda \u00ed booth');
@@ -578,7 +593,7 @@ async function sendaIBooth() {
           take: 1,
         })
       );
-      alert('Sent \u00ed booth!');
+      if (showAlert) alert('Sent \u00ed booth!');
     } else {
       alert('Ekki tengt vi\u00f0 server');
     }
@@ -885,22 +900,24 @@ function setupEventListeners() {
     if (!match) return;
 
     const docId = match[1];
-    document.getElementById('handrit').value = 'S\u00e6ki handrit...';
+    document.getElementById('handritEditor').innerHTML = 'S\u00e6ki handrit...';
 
     try {
       const res = await fetch('/api/google-doc/' + docId);
       if (res.ok) {
         const data = await res.json();
-        document.getElementById('handrit').value = data.content || data.text || '';
+        const content = data.content || data.text || '';
+        document.getElementById('handritEditor').innerHTML = content;
+        document.getElementById('handrit').value = content;
         triggerAutosave();
         startGoogleDocPolling(docId);
       } else {
-        document.getElementById('handrit').value =
+        document.getElementById('handritEditor').innerHTML =
           'Villa vi\u00f0 a\u00f0 s\u00e6kja handrit. Athuga\u00f0u a\u00f0 Google Doc s\u00e9 opi\u00f0 fyrir "Anyone with the link".';
       }
     } catch (err) {
       console.error(err);
-      document.getElementById('handrit').value = 'Villa vi\u00f0 a\u00f0 s\u00e6kja handrit.';
+      document.getElementById('handritEditor').innerHTML = 'Villa vi\u00f0 a\u00f0 s\u00e6kja handrit.';
     }
   });
 
@@ -946,6 +963,96 @@ function setupEventListeners() {
     window.history.replaceState({}, document.title, window.location.pathname);
   }
 }
+
+// Handrit Editor functions
+function formatText(command) {
+  document.execCommand(command, false, null);
+  document.getElementById('handritEditor').focus();
+  syncHandritToHidden();
+}
+
+function formatColor(color) {
+  if (color) {
+    document.execCommand('foreColor', false, color);
+  } else {
+    document.execCommand('removeFormat', false, null);
+  }
+  document.getElementById('handritEditor').focus();
+  syncHandritToHidden();
+}
+
+function removeAllFormatting() {
+  const editor = document.getElementById('handritEditor');
+  // Get plain text content
+  const plainText = editor.innerText || editor.textContent;
+  // Replace with plain text
+  editor.innerHTML = plainText.replace(/\n/g, '<br>');
+  syncHandritToHidden();
+  editor.focus();
+}
+
+function syncHandritToHidden() {
+  const editor = document.getElementById('handritEditor');
+  document.getElementById('handrit').value = editor.innerHTML;
+  triggerAutosave();
+}
+
+function syncHiddenToEditor() {
+  const editor = document.getElementById('handritEditor');
+  const hidden = document.getElementById('handrit').value;
+  editor.innerHTML = hidden || '';
+}
+
+// Update stada from header select
+function updateStada(value) {
+  document.getElementById('stada').value = value;
+  updateStadaColor(value);
+  triggerAutosave();
+}
+
+// Update stada select color based on value
+function updateStadaColor(value) {
+  const select = document.getElementById('stadaHeader');
+  select.classList.remove('stada-vinnslu', 'stada-bidur', 'stada-lokid');
+  if (value === 'Í vinnslu') {
+    select.classList.add('stada-vinnslu');
+  } else if (value === 'Bíður') {
+    select.classList.add('stada-bidur');
+  } else if (value === 'Lokið') {
+    select.classList.add('stada-lokid');
+  }
+}
+
+// Send to booth and open booth modal
+async function sendaOgOpnaBooth() {
+  await sendaIBooth();
+  opnaBoothModal();
+}
+
+// Booth Modal functions
+function opnaBoothModal() {
+  document.getElementById('boothModalOverlay').classList.add('active');
+  // Refresh the iframe to get latest state
+  const iframe = document.getElementById('boothIframe');
+  iframe.src = iframe.src;
+}
+
+function opnaBoothGluggi() {
+  // Send data to booth first, then open new window
+  sendaIBooth();
+  window.open('booth.html', 'booth', 'width=1200,height=800');
+}
+
+function lokaBoothModal() {
+  document.getElementById('boothModalOverlay').classList.remove('active');
+}
+
+// Close booth modal with Escape
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && document.getElementById('boothModalOverlay').classList.contains('active')) {
+    lokaBoothModal();
+  }
+});
 
 // Initialize
 initDarkMode();

@@ -172,7 +172,8 @@ function showHandrit(data) {
   document.getElementById('centerLine').style.display = 'block';
 
   document.getElementById('verkefniNafn').textContent = data.nafn || '';
-  document.getElementById('handritText').textContent = data.handrit || '';
+  // Use innerHTML to preserve formatting (bold, colors)
+  document.getElementById('handritText').innerHTML = formatHandrit(data.handrit || '');
   document.getElementById('lesariNafn').textContent = data.lesari
     ? `Lesari: ${data.lesari}`
     : '';
@@ -199,6 +200,18 @@ function showHandrit(data) {
   scrollToTop();
 }
 
+// Format handrit text - preserves HTML and converts newlines
+function formatHandrit(text) {
+  if (!text) return '';
+  // Allow safe HTML tags: b, strong, i, em, u, span (for colors), br, p
+  // Convert newlines to <br> if no HTML block tags present
+  const hasBlockTags = /<(p|div|br)[^>]*>/i.test(text);
+  if (!hasBlockTags) {
+    text = text.replace(/\n/g, '<br>');
+  }
+  return text;
+}
+
 function startGoogleDocPolling() {
   stopGoogleDocPolling();
   const docId = googleDocId;
@@ -209,9 +222,10 @@ function startGoogleDocPolling() {
       const res = await fetch(`/api/google-doc/${docId}`);
       const data = await res.json();
       if (data.content) {
-        const currentText = document.getElementById('handritText').textContent;
-        if (data.content !== currentText) {
-          document.getElementById('handritText').textContent = data.content;
+        const currentHtml = document.getElementById('handritText').innerHTML;
+        const newHtml = formatHandrit(data.content);
+        if (newHtml !== currentHtml) {
+          document.getElementById('handritText').innerHTML = newHtml;
         }
       }
     } catch (err) {

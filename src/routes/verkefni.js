@@ -7,7 +7,7 @@ const { dbAll, dbGet, dbRun } = require('../database/helpers');
 // Get all projects
 router.get('/', async (req, res) => {
   try {
-    const userId = req.user?.id;
+    const userId = req.user?.id || null;
     const isAdmin = req.user?.is_admin === 1;
 
     let verkefni;
@@ -32,7 +32,8 @@ router.get('/', async (req, res) => {
     }
     res.json(verkefni);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Verkefni GET error:', err);
+    res.status(500).json({ error: err.message || String(err) });
   }
 });
 
@@ -71,17 +72,17 @@ router.post('/', async (req, res) => {
     }
     const verkefnanumer = prefix + '-' + String(seq).padStart(3, '0');
 
-    const userId = req.user?.id;
+    const userId = req.user?.id || null;
 
     const result = await dbRun(
       `
       INSERT INTO verkefni (user_id, verkefnanumer, nafn, mynd, framleidsla, produser, produser_simi, produser_netfang,
         stofa, tengill_nafn, tengill_simi, tengill_netfang, art_director, art_director_simi,
-        copywriter, copywriter_simi, lesari, handrit, google_doc_url, google_doc_id,
+        copywriter, copywriter_simi, lesari, lesari_simi, lesari_netfang, handrit, google_doc_url, google_doc_id,
         tonlist_titill, tonlist_heimild, tonlist_url, tonlist_kostnadur,
         stada, athugasemdir, payday_tengill, dropbox_slod, mottekid, skilad,
         kunni, kunni_tengill, kunni_simi, kunni_netfang)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `,
       [
         userId,
@@ -101,6 +102,8 @@ router.post('/', async (req, res) => {
         b.copywriter || '',
         b.copywriter_simi || '',
         b.lesari || '',
+        b.lesari_simi || '',
+        b.lesari_netfang || '',
         b.handrit || '',
         b.google_doc_url || '',
         google_doc_id,
@@ -122,7 +125,8 @@ router.post('/', async (req, res) => {
     );
     res.json({ id: result.lastInsertRowid, message: 'Verkefni búið til' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Verkefni POST error:', err);
+    res.status(500).json({ error: err.message || String(err) });
   }
 });
 
@@ -168,7 +172,7 @@ router.put('/:id', async (req, res) => {
       `
       UPDATE verkefni SET nafn=?, mynd=?, framleidsla=?, produser=?, produser_simi=?, produser_netfang=?,
         stofa=?, tengill_nafn=?, tengill_simi=?, tengill_netfang=?, art_director=?, art_director_simi=?,
-        copywriter=?, copywriter_simi=?, lesari=?, handrit=?, google_doc_url=?, google_doc_id=?,
+        copywriter=?, copywriter_simi=?, lesari=?, lesari_simi=?, lesari_netfang=?, handrit=?, google_doc_url=?, google_doc_id=?,
         tonlist_titill=?, tonlist_heimild=?, tonlist_url=?, tonlist_kostnadur=?,
         stada=?, athugasemdir=?, payday_tengill=?, dropbox_slod=?, mottekid=?, skilad=?,
         kunni=?, kunni_tengill=?, kunni_simi=?, kunni_netfang=?, updated_at=CURRENT_TIMESTAMP
@@ -190,6 +194,8 @@ router.put('/:id', async (req, res) => {
         b.copywriter || '',
         b.copywriter_simi || '',
         b.lesari || '',
+        b.lesari_simi || '',
+        b.lesari_netfang || '',
         b.handrit || '',
         b.google_doc_url || '',
         google_doc_id,

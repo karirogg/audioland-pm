@@ -368,6 +368,7 @@
 .modal-overlay.active {
   display: flex;
   justify-content: center;
+  align-items: flex-start;
 }
 
 .modal {
@@ -375,9 +376,9 @@
   border-radius: 16px;
   width: 100%;
   max-width: 900px;
-  max-height: 90vh;
+  max-height: calc(100vh - 4rem);
   overflow-y: auto;
-  margin: auto;
+  margin-top: 0;
   box-shadow: 0 20px 60px var(--shadow-heavy);
 }
 
@@ -391,6 +392,122 @@
   top: 0;
   background: var(--modal-bg);
   z-index: 10;
+}
+
+.modal-header-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.stada-select {
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  border: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: #fff;
+}
+
+.stada-select.stada-vinnslu {
+  background: #22c55e;
+}
+
+.stada-select.stada-bidur {
+  background: #eab308;
+  color: #000;
+}
+
+.stada-select.stada-lokid {
+  background: #ef4444;
+}
+
+.stada-select option {
+  background: var(--bg-card);
+  color: var(--text);
+}
+
+/* Handrit Editor */
+.editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+}
+
+.toolbar-btn {
+  padding: 0.4rem 0.6rem;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 0.85rem;
+  cursor: pointer;
+  min-width: 32px;
+}
+
+.toolbar-btn:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--accent);
+}
+
+.toolbar-btn b {
+  font-weight: 700;
+}
+
+.toolbar-btn i {
+  font-style: italic;
+}
+
+.toolbar-separator {
+  color: var(--border);
+  margin: 0 0.25rem;
+}
+
+.color-btn {
+  font-size: 1rem;
+}
+
+.color-btn.color-red { color: #ef4444; }
+.color-btn.color-blue { color: #3b82f6; }
+.color-btn.color-green { color: #22c55e; }
+.color-btn.color-yellow { color: #eab308; }
+
+.handrit-editor {
+  min-height: 300px;
+  padding: 1.5rem;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 0 0 8px 8px;
+  color: var(--text);
+  font-family: 'Libre Baskerville', Georgia, serif;
+  font-size: 1.1rem;
+  line-height: 2;
+  outline: none;
+  overflow-y: auto;
+}
+
+.handrit-editor:focus {
+  border-color: var(--accent);
+}
+
+.handrit-editor:empty::before {
+  content: "Sláðu inn handrit eða tengdu Google Doc...";
+  color: var(--text-dim);
+}
+
+/* Preserve formatting in editor */
+.handrit-editor b, .handrit-editor strong {
+  font-weight: 700;
+}
+
+.handrit-editor i, .handrit-editor em {
+  font-style: italic;
 }
 
 .modal-number {
@@ -847,4 +964,76 @@
   .modal-footer-right .btn {
     flex: 1 1 45%;
   }
+}
+
+/* Booth Modal */
+.booth-modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 2000;
+  padding: 1rem;
+}
+
+.booth-modal-overlay.active {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.booth-modal {
+  background: var(--bg-card);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 1400px;
+  height: calc(100vh - 2rem);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.booth-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-card);
+}
+
+.booth-modal-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.booth-modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.booth-modal-close {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0 0.25rem;
+}
+
+.booth-modal-close:hover {
+  color: var(--text);
+}
+
+.booth-modal iframe {
+  flex: 1;
+  width: 100%;
+  border: none;
+  background: #000;
 }

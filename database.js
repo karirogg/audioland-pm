@@ -155,6 +155,14 @@ async function runMigrations(execute) {
       await execute("ALTER TABLE verkefni ADD COLUMN kunni_netfang TEXT");
       console.log("Migration complete: kunni fields added");
     }
+
+    // Add verkefnanumer column
+    const hasVerkefnanumer = columns.some(col => col.name === 'verkefnanumer');
+    if (!hasVerkefnanumer) {
+      console.log("Migration: Adding verkefnanumer column to verkefni...");
+      await execute("ALTER TABLE verkefni ADD COLUMN verkefnanumer TEXT");
+      console.log("Migration complete: verkefnanumer column added");
+    }
   } catch (err) {
     console.log("Migration error (may be expected on fresh DB):", err.message);
   }

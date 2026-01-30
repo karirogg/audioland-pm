@@ -162,13 +162,23 @@ body {
   text-align: center;
   max-width: 1000px;
   margin: 0 auto;
-  white-space: pre-wrap;
   font-size: 2.5rem;
   color: var(--text);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .handrit-text.align-left {
   text-align: left;
+}
+
+/* Formatting support */
+.handrit-text b, .handrit-text strong {
+  font-weight: 700;
+}
+
+.handrit-text i, .handrit-text em {
+  font-style: italic;
 }
 
 /* Center line */

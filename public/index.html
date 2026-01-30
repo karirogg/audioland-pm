@@ -43,7 +43,7 @@
         </a>
         <button
           class="btn btn-secondary"
-          onclick="window.open('booth.html', 'booth', 'width=1200,height=800')"
+          onclick="opnaBoothModal()"
         >
           🎙️ Opna Booth
         </button>
@@ -85,13 +85,20 @@
     </footer>
 
     <div class="modal-overlay" id="modalOverlay">
-      <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal">
         <div class="modal-header">
           <div>
             <span class="modal-number" id="modalNumber"></span>
             <h2 class="modal-title" id="modalTitle">Verkefni</h2>
           </div>
-          <button class="modal-close" onclick="lokaModal()">&times;</button>
+          <div class="modal-header-right">
+            <select id="stadaHeader" class="stada-select" onchange="updateStada(this.value)">
+              <option value="Í vinnslu">Í vinnslu</option>
+              <option value="Bíður">Bíður</option>
+              <option value="Lokið">Lokið</option>
+            </select>
+            <button class="modal-close" onclick="lokaModal()">&times;</button>
+          </div>
         </div>
         <div class="modal-body">
           <div class="tabs">
@@ -108,6 +115,7 @@
             <input type="hidden" id="verkefniId" value="" />
 
             <div class="tab-content active" id="tab-grunnur">
+              <input type="hidden" id="stada" />
               <div class="form-section">
                 <div class="form-section-title">Verkefni</div>
                 <div class="form-row">
@@ -115,16 +123,6 @@
                     <label>Nafn verkefnis *</label
                     ><input type="text" id="nafn" required />
                   </div>
-                  <div class="form-group">
-                    <label>Staða</label
-                    ><select id="stada">
-                      <option value="Í vinnslu">Í vinnslu</option>
-                      <option value="Bíður">Bíður</option>
-                      <option value="Lokið">Lokið</option>
-                    </select>
-                  </div>
-                </div>
-                <div class="form-row">
                   <div class="form-group">
                     <label>Mynd</label
                     ><input
@@ -135,14 +133,6 @@
                     /><input type="hidden" id="myndBase64" />
                     <div id="myndPreview" style="margin-top: 0.5rem"></div>
                   </div>
-                  <div class="form-group">
-                    <label>Lesari</label
-                    ><input
-                      type="text"
-                      id="lesari"
-                      list="lesendurList"
-                    /><datalist id="lesendurList"></datalist>
-                  </div>
                 </div>
                 <div class="form-row">
                   <div class="form-group">
@@ -150,6 +140,27 @@
                   </div>
                   <div class="form-group">
                     <label>Skilað</label><input type="date" id="skilad" />
+                  </div>
+                </div>
+              </div>
+              <div class="form-section">
+                <div class="form-section-title">Lesari</div>
+                <div class="form-row form-row-3">
+                  <div class="form-group">
+                    <label>Nafn</label
+                    ><input
+                      type="text"
+                      id="lesari"
+                      list="lesendurList"
+                    /><datalist id="lesendurList"></datalist>
+                  </div>
+                  <div class="form-group">
+                    <label>Sími</label
+                    ><input type="tel" id="lesari_simi" />
+                  </div>
+                  <div class="form-group">
+                    <label>Netfang</label
+                    ><input type="email" id="lesari_netfang" />
                   </div>
                 </div>
               </div>
@@ -186,31 +197,6 @@
             </div>
 
             <div class="tab-content" id="tab-tengilidir">
-              <div class="form-section">
-                <div class="form-section-title">Framleiðslufyrirtæki</div>
-                <div class="form-row form-row-3">
-                  <div class="form-group">
-                    <label>Fyrirtæki</label
-                    ><input
-                      type="text"
-                      id="framleidsla"
-                      list="framleidslaList"
-                    /><datalist id="framleidslaList"></datalist>
-                  </div>
-                  <div class="form-group">
-                    <label>Pródúser</label><input type="text" id="produser" />
-                  </div>
-                  <div class="form-group">
-                    <label>Sími</label><input type="tel" id="produser_simi" />
-                  </div>
-                </div>
-                <div class="form-row">
-                  <div class="form-group">
-                    <label>Netfang</label
-                    ><input type="email" id="produser_netfang" />
-                  </div>
-                </div>
-              </div>
               <div class="form-section">
                 <div class="form-section-title">Auglýsingastofa</div>
                 <div class="form-row form-row-3">
@@ -254,6 +240,31 @@
                   </div>
                   <div class="form-group">
                     <label>Sími</label><input type="tel" id="copywriter_simi" />
+                  </div>
+                </div>
+              </div>
+              <div class="form-section">
+                <div class="form-section-title">Framleiðslufyrirtæki</div>
+                <div class="form-row form-row-3">
+                  <div class="form-group">
+                    <label>Fyrirtæki</label
+                    ><input
+                      type="text"
+                      id="framleidsla"
+                      list="framleidslaList"
+                    /><datalist id="framleidslaList"></datalist>
+                  </div>
+                  <div class="form-group">
+                    <label>Pródúser</label><input type="text" id="produser" />
+                  </div>
+                  <div class="form-group">
+                    <label>Sími</label><input type="tel" id="produser_simi" />
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Netfang</label
+                    ><input type="email" id="produser_netfang" />
                   </div>
                 </div>
               </div>
@@ -304,11 +315,24 @@
               <div class="form-section">
                 <div class="form-section-title">Handrit</div>
                 <div class="form-group full-width">
-                  <textarea
-                    id="handrit"
-                    style="min-height: 250px; font-family: monospace"
-                    placeholder="Sláðu inn handrit eða tengdu Google Doc..."
-                  ></textarea>
+                  <div class="editor-toolbar">
+                    <button type="button" class="toolbar-btn" onclick="formatText('bold')" title="Feitletrað"><b>B</b></button>
+                    <button type="button" class="toolbar-btn" onclick="formatText('italic')" title="Skáletrað"><i>I</i></button>
+                    <span class="toolbar-separator">|</span>
+                    <button type="button" class="toolbar-btn color-btn color-red" onclick="formatColor('#ef4444')" title="Rauður">●</button>
+                    <button type="button" class="toolbar-btn color-btn color-blue" onclick="formatColor('#3b82f6')" title="Blár">●</button>
+                    <button type="button" class="toolbar-btn color-btn color-green" onclick="formatColor('#22c55e')" title="Grænn">●</button>
+                    <button type="button" class="toolbar-btn color-btn color-yellow" onclick="formatColor('#eab308')" title="Gulur">●</button>
+                    <span class="toolbar-separator">|</span>
+                    <button type="button" class="toolbar-btn" onclick="removeAllFormatting()" title="Fjarlægja alla formatting">Hreinsa</button>
+                  </div>
+                  <div
+                    id="handritEditor"
+                    class="handrit-editor"
+                    contenteditable="true"
+                    oninput="syncHandritToHidden()"
+                  ></div>
+                  <input type="hidden" id="handrit" />
                 </div>
               </div>
             </div>
@@ -575,12 +599,12 @@
             </button>
             <button
               type="button"
-              class="btn btn-outline"
-              id="sendaBoothBtn"
+              class="btn btn-secondary"
+              id="opnaBoothBtn"
               style="display: none"
-              onclick="sendaIBooth()"
+              onclick="sendaOgOpnaBooth()"
             >
-              🎙️ Senda í Booth
+              🎙️ Opna Booth
             </button>
             <button type="button" class="btn btn-outline btn-outline-primary" onclick="autosave()">
               Vista
@@ -590,6 +614,22 @@
             </button>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Booth Modal -->
+    <div class="booth-modal-overlay" id="boothModalOverlay" onclick="lokaBoothModal()">
+      <div class="booth-modal" onclick="event.stopPropagation()">
+        <div class="booth-modal-header">
+          <h3>Booth View</h3>
+          <div class="booth-modal-actions">
+            <button class="btn btn-ghost" onclick="opnaBoothGluggi()" title="Opna í nýjum glugga">
+              ↗ Nýr gluggi
+            </button>
+            <button class="booth-modal-close" onclick="lokaBoothModal()">&times;</button>
+          </div>
+        </div>
+        <iframe id="boothIframe" src="booth.html"></iframe>
       </div>
     </div>
 
