@@ -18,6 +18,11 @@ const config = {
   googleClientId: process.env.GOOGLE_CLIENT_ID,
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
 
+  // Allowed emails (comma-separated list, or empty for all)
+  allowedEmails: process.env.ALLOWED_EMAILS
+    ? process.env.ALLOWED_EMAILS.split(',').map(e => e.trim().toLowerCase())
+    : [],
+
   // Ably (real-time for production)
   ablyApiKey: process.env.ABLY_API_KEY,
   useAbly: isProduction && !!process.env.ABLY_API_KEY,

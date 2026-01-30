@@ -151,8 +151,9 @@
                     ><input
                       type="text"
                       id="lesari"
-                      list="lesendurList"
-                    /><datalist id="lesendurList"></datalist>
+                      list="lesariList"
+                      onchange="lookupContact('lesari', 'lesari', 'lesari_simi', 'lesari_netfang')"
+                    /><datalist id="lesariList"></datalist>
                   </div>
                   <div class="form-group">
                     <label>Sími</label
@@ -208,7 +209,9 @@
                   </div>
                   <div class="form-group">
                     <label>Tengiliður</label
-                    ><input type="text" id="tengill_nafn" />
+                    ><input type="text" id="tengill_nafn" list="tengillList"
+                      onchange="lookupContact('tengill', 'tengill_nafn', 'tengill_simi', 'tengill_netfang')"
+                    /><datalist id="tengillList"></datalist>
                   </div>
                   <div class="form-group">
                     <label>Sími</label><input type="tel" id="tengill_simi" />
@@ -226,7 +229,9 @@
                 <div class="form-row">
                   <div class="form-group">
                     <label>Art Director</label
-                    ><input type="text" id="art_director" />
+                    ><input type="text" id="art_director" list="artDirectorList"
+                      onchange="lookupContact('art_director', 'art_director', 'art_director_simi', null)"
+                    /><datalist id="artDirectorList"></datalist>
                   </div>
                   <div class="form-group">
                     <label>Sími</label
@@ -236,7 +241,9 @@
                 <div class="form-row">
                   <div class="form-group">
                     <label>Copywriter</label
-                    ><input type="text" id="copywriter" />
+                    ><input type="text" id="copywriter" list="copywriterList"
+                      onchange="lookupContact('copywriter', 'copywriter', 'copywriter_simi', null)"
+                    /><datalist id="copywriterList"></datalist>
                   </div>
                   <div class="form-group">
                     <label>Sími</label><input type="tel" id="copywriter_simi" />
@@ -255,7 +262,9 @@
                     /><datalist id="framleidslaList"></datalist>
                   </div>
                   <div class="form-group">
-                    <label>Pródúser</label><input type="text" id="produser" />
+                    <label>Pródúser</label><input type="text" id="produser" list="produserList"
+                      onchange="lookupContact('produser', 'produser', 'produser_simi', 'produser_netfang')"
+                    /><datalist id="produserList"></datalist>
                   </div>
                   <div class="form-group">
                     <label>Sími</label><input type="tel" id="produser_simi" />
@@ -281,7 +290,9 @@
                   </div>
                   <div class="form-group">
                     <label>Tengiliður</label
-                    ><input type="text" id="kunni_tengill" />
+                    ><input type="text" id="kunni_tengill" list="kunniTengillList"
+                      onchange="lookupContact('kunni_tengill', 'kunni_tengill', 'kunni_simi', 'kunni_netfang')"
+                    /><datalist id="kunniTengillList"></datalist>
                   </div>
                 </div>
                 <div class="form-row">

@@ -29,6 +29,7 @@ const { router: boothRoutes } = require('./booth/routes');
 const lesendurRoutes = require('./routes/lesendur');
 const kunnarRoutes = require('./routes/kunnar');
 const sessionsRoutes = require('./routes/sessions');
+const tengiliðirRoutes = require('./routes/tengilidir');
 const exportRoutes = require('./routes/export');
 
 // Database
@@ -70,6 +71,7 @@ app.use('/api/booth', boothRoutes);
 app.use('/api/lesendur', lesendurRoutes);
 app.use('/api/kunnar', kunnarRoutes);
 app.use('/api', sessionsRoutes);
+app.use('/api/tengilidir', tengiliðirRoutes);
 app.use('/api', exportRoutes);
 
 // Setup WebSocket for development

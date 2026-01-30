@@ -116,6 +116,15 @@ const CREATE_TABLES_SQL = [
     simi TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
   )`,
+  `CREATE TABLE IF NOT EXISTS tengilidir (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tegund TEXT NOT NULL,
+    nafn TEXT NOT NULL,
+    simi TEXT,
+    netfang TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(tegund, nafn)
+  )`,
 ];
 
 // Run migrations for existing databases

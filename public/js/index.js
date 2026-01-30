@@ -449,6 +449,9 @@ async function autosave() {
     document.getElementById('saveStatus').className = 'save-status saved';
     document.getElementById('modalTitle').textContent = data.nafn || 'Verkefni';
 
+    // Save contacts in background
+    saveAllContacts();
+
     setTimeout(() => {
       const status = document.getElementById('saveStatus');
       if (status.innerHTML === '\u2713 Vista\u00f0') status.innerHTML = '';
@@ -991,6 +994,75 @@ function removeAllFormatting() {
   editor.focus();
 }
 
+// Contact auto-fill functionality
+async function lookupContact(tegund, nafnFieldId, simiFieldId, netfangFieldId) {
+  const nafn = document.getElementById(nafnFieldId).value;
+  if (!nafn) return;
+
+  try {
+    const res = await fetch(`/api/tengilidir/lookup?tegund=${encodeURIComponent(tegund)}&nafn=${encodeURIComponent(nafn)}`);
+    const contact = await res.json();
+    if (contact && contact.nafn) {
+      if (simiFieldId && contact.simi) {
+        document.getElementById(simiFieldId).value = contact.simi;
+      }
+      if (netfangFieldId && contact.netfang) {
+        document.getElementById(netfangFieldId).value = contact.netfang;
+      }
+      triggerAutosave();
+    }
+  } catch (err) {
+    console.error('Contact lookup error:', err);
+  }
+}
+
+async function saveContact(tegund, nafn, simi, netfang) {
+  if (!nafn) return;
+  try {
+    await fetch('/api/tengilidir', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tegund, nafn, simi, netfang })
+    });
+  } catch (err) {
+    console.error('Contact save error:', err);
+  }
+}
+
+async function saveAllContacts() {
+  // Save all contacts from the form
+  const contacts = [
+    { tegund: 'lesari', nafn: 'lesari', simi: 'lesari_simi', netfang: 'lesari_netfang' },
+    { tegund: 'produser', nafn: 'produser', simi: 'produser_simi', netfang: 'produser_netfang' },
+    { tegund: 'tengill', nafn: 'tengill_nafn', simi: 'tengill_simi', netfang: 'tengill_netfang' },
+    { tegund: 'art_director', nafn: 'art_director', simi: 'art_director_simi', netfang: null },
+    { tegund: 'copywriter', nafn: 'copywriter', simi: 'copywriter_simi', netfang: null },
+    { tegund: 'kunni_tengill', nafn: 'kunni_tengill', simi: 'kunni_simi', netfang: 'kunni_netfang' },
+  ];
+
+  for (const c of contacts) {
+    const nafn = document.getElementById(c.nafn)?.value;
+    const simi = c.simi ? document.getElementById(c.simi)?.value : '';
+    const netfang = c.netfang ? document.getElementById(c.netfang)?.value : '';
+    if (nafn && (simi || netfang)) {
+      await saveContact(c.tegund, nafn, simi, netfang);
+    }
+  }
+}
+
+async function loadContactDatalist(tegund, datalistId) {
+  try {
+    const res = await fetch(`/api/tengilidir?tegund=${encodeURIComponent(tegund)}`);
+    const contacts = await res.json();
+    const datalist = document.getElementById(datalistId);
+    if (datalist && contacts.length > 0) {
+      datalist.innerHTML = contacts.map(c => `<option value="${escapeHtml(c.nafn)}">`).join('');
+    }
+  } catch (err) {
+    console.error('Load contact datalist error:', err);
+  }
+}
+
 function syncHandritToHidden() {
   const editor = document.getElementById('handritEditor');
   document.getElementById('handrit').value = editor.innerHTML;
@@ -1054,6 +1126,16 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+// Load all contact datalists
+async function loadAllContactDataLists() {
+  loadContactDatalist('lesari', 'lesariList');
+  loadContactDatalist('tengill', 'tengillList');
+  loadContactDatalist('art_director', 'artDirectorList');
+  loadContactDatalist('copywriter', 'copywriterList');
+  loadContactDatalist('produser', 'produserList');
+  loadContactDatalist('kunni_tengill', 'kunniTengillList');
+}
+
 // Initialize
 initDarkMode();
 initView();
@@ -1064,4 +1146,5 @@ saekjaStofur();
 saekjaFramleidslu();
 saekjaLesendur();
 saekjaKunnar();
+loadAllContactDataLists();
 setupEventListeners();

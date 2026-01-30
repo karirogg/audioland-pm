@@ -139,32 +139,32 @@ body {
 }
 
 .status-badge.vinnslu {
-  background: var(--accent);
-  color: #000;
-}
-
-.status-badge.bidur {
-  background: var(--danger);
+  background: #22c55e;
   color: #fff;
 }
 
+.status-badge.bidur {
+  background: #eab308;
+  color: #000;
+}
+
 .status-badge.lokid {
-  background: var(--success);
+  background: #ef4444;
   color: #fff;
 }
 
 [data-theme="dark"] .status-badge.vinnslu {
-  background: #d4900f;
+  background: #22c55e;
   color: #fff;
 }
 
 [data-theme="dark"] .status-badge.bidur {
-  background: #c93b3b;
-  color: #fff;
+  background: #eab308;
+  color: #000;
 }
 
 [data-theme="dark"] .status-badge.lokid {
-  background: #1a9d4a;
+  background: #ef4444;
   color: #fff;
 }
 

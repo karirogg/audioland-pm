@@ -22,6 +22,14 @@ function setupPassport(app) {
           return done(null, false, { message: 'Ekkert email fannst' });
         }
 
+        // Check if email is in allowed list (if list exists)
+        if (config.allowedEmails.length > 0) {
+          if (!config.allowedEmails.includes(email.toLowerCase())) {
+            console.log('Access denied for:', email);
+            return done(null, false, { message: 'Þú hefur ekki aðgang að þessu kerfi' });
+          }
+        }
+
         try {
           // Check if user exists
           let user = await dbGet('SELECT * FROM users WHERE email = ?', [email.toLowerCase()]);

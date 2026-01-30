@@ -220,15 +220,15 @@
 }
 
 .card.stada-vinnslu {
-  border-left-color: var(--accent);
+  border-left-color: #22c55e;
 }
 
 .card.stada-bidur {
-  border-left-color: var(--danger);
+  border-left-color: #eab308;
 }
 
 .card.stada-lokid {
-  border-left-color: var(--success);
+  border-left-color: #ef4444;
 }
 
 .card-image {
