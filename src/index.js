@@ -26,6 +26,10 @@ const pdfRoutes = require('./routes/pdf');
 const configRoutes = require('./routes/config');
 const ablyTokenRoutes = require('./routes/ably-token');
 const { router: boothRoutes } = require('./booth/routes');
+const lesendurRoutes = require('./routes/lesendur');
+const kunnarRoutes = require('./routes/kunnar');
+const sessionsRoutes = require('./routes/sessions');
+const exportRoutes = require('./routes/export');
 
 // Database
 const { initDatabase, isUsingTurso } = require('../database');
@@ -63,6 +67,10 @@ app.use('/api', pdfRoutes);
 app.use('/api', configRoutes);
 app.use('/api', ablyTokenRoutes);
 app.use('/api/booth', boothRoutes);
+app.use('/api/lesendur', lesendurRoutes);
+app.use('/api/kunnar', kunnarRoutes);
+app.use('/api', sessionsRoutes);
+app.use('/api', exportRoutes);
 
 // Setup WebSocket for development
 if (!config.isProduction) {

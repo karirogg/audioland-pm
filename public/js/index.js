@@ -7,6 +7,7 @@ let currentTimeType = 'timi';
 let isLoadingProject = false;
 let tempTimaSkraningar = [];
 let tempAdkeypt = [];
+let tempLotur = [];
 let ws = null;
 let saveTimeout = null;
 let currentVerkefniId = null;
@@ -63,6 +64,26 @@ async function saekjaFramleidslu() {
     const data = await res.json();
     document.getElementById('framleidslaList').innerHTML = data
       .map((f) => '<option value="' + escapeHtml(f.nafn) + '">')
+      .join('');
+  } catch (err) {}
+}
+
+async function saekjaLesendur() {
+  try {
+    const res = await fetch('/api/lesendur');
+    const data = await res.json();
+    document.getElementById('lesendurList').innerHTML = data
+      .map((l) => '<option value="' + escapeHtml(l.nafn) + '">')
+      .join('');
+  } catch (err) {}
+}
+
+async function saekjaKunnar() {
+  try {
+    const res = await fetch('/api/kunnar');
+    const data = await res.json();
+    document.getElementById('kunnarList').innerHTML = data
+      .map((k) => '<option value="' + escapeHtml(k.nafn) + '">')
       .join('');
   } catch (err) {}
 }
@@ -221,8 +242,10 @@ async function nyttVerkefni() {
     stopGoogleDocPolling();
     tempTimaSkraningar = [];
     tempAdkeypt = [];
+    tempLotur = [];
     birtaTimaSkraningar();
     birtaAdkeypt();
+    birtaLotur();
     switchTab('grunnur');
 
     setTimeout(() => {
@@ -315,6 +338,10 @@ async function opnaVerkefni(id) {
       'copywriter_simi',
       'google_doc_url',
       'handrit',
+      'kunni',
+      'kunni_tengill',
+      'kunni_simi',
+      'kunni_netfang',
     ].forEach((f) => {
       const el = document.getElementById(f);
       if (el) el.value = v[f] || '';
@@ -339,6 +366,7 @@ async function opnaVerkefni(id) {
 
     await saekjaTimaskraningar(v.id);
     await saekjaAdkeypt(v.id);
+    await saekjaLotur(v.id);
     switchTab('grunnur');
     isLoadingProject = false;
   } catch (err) {
@@ -384,6 +412,10 @@ async function autosave() {
     'copywriter_simi',
     'google_doc_url',
     'handrit',
+    'kunni',
+    'kunni_tengill',
+    'kunni_simi',
+    'kunni_netfang',
   ].forEach((f) => {
     const el = document.getElementById(f);
     if (el) data[f] = el.value;
@@ -735,6 +767,85 @@ async function eydaLagi(id) {
   }
 }
 
+// Session management functions
+async function saekjaLotur(verkefniId) {
+  try {
+    const res = await fetch('/api/verkefni/' + verkefniId + '/sessions');
+    tempLotur = await res.json();
+    birtaLotur();
+  } catch (err) {
+    tempLotur = [];
+    birtaLotur();
+  }
+}
+
+function birtaLotur() {
+  const container = document.getElementById('loturList');
+  if (tempLotur.length === 0) {
+    container.innerHTML = '<p style="color: var(--text-dim);">Engar lotur skráðar</p>';
+    return;
+  }
+  container.innerHTML = tempLotur
+    .map(
+      (s) =>
+        '<div class="time-entry"><div class="time-entry-icon">📅</div>' +
+        '<div class="time-entry-content"><div class="time-entry-title">' +
+        formatDate(s.dags) + ' kl. ' + (s.timi || '09:00') +
+        (s.lesari ? ' - ' + escapeHtml(s.lesari) : '') +
+        '</div><div class="time-entry-meta">' +
+        (s.lengd || 60) + ' mín' +
+        (s.athugasemd ? ' • ' + escapeHtml(s.athugasemd) : '') +
+        '</div></div>' +
+        '<a href="/api/sessions/' + s.id + '/ics" class="btn btn-ghost btn-small" title="Sækja dagatal" style="margin-right:0.5rem;">📆</a>' +
+        '<button type="button" class="time-entry-delete" onclick="eydaLotu(' + s.id + ')">🗑️</button></div>'
+    )
+    .join('');
+}
+
+function toggleSessionForm() {
+  document.getElementById('sessionForm').classList.toggle('active');
+  document.getElementById('session_dags').value = new Date().toISOString().split('T')[0];
+}
+
+async function baetaVidLotu() {
+  if (!currentVerkefniId) {
+    alert('Vista verkefnið fyrst');
+    return;
+  }
+  const data = {
+    dags: document.getElementById('session_dags').value,
+    timi: document.getElementById('session_timi').value,
+    lengd: parseInt(document.getElementById('session_lengd').value) || 60,
+    lesari: document.getElementById('session_lesari').value,
+    athugasemd: document.getElementById('session_athugasemd').value,
+    emails: document.getElementById('session_emails').value,
+  };
+  try {
+    await fetch('/api/verkefni/' + currentVerkefniId + '/sessions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    document.getElementById('session_athugasemd').value = '';
+    document.getElementById('session_emails').value = '';
+    document.getElementById('session_lesari').value = '';
+    document.getElementById('sessionForm').classList.remove('active');
+    await saekjaLotur(currentVerkefniId);
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+async function eydaLotu(id) {
+  if (!confirm('Eyða lotu?')) return;
+  try {
+    await fetch('/api/sessions/' + id, { method: 'DELETE' });
+    await saekjaLotur(currentVerkefniId);
+  } catch (err) {
+    console.error(err);
+  }
+}
+
 function downloadPDF() {
   if (!currentVerkefniId) {
     alert('Vista verkefni\u00f0 fyrst');
@@ -844,4 +955,6 @@ fetchUser();
 saekjaVerkefni();
 saekjaStofur();
 saekjaFramleidslu();
+saekjaLesendur();
+saekjaKunnar();
 setupEventListeners();

@@ -97,6 +97,25 @@ const CREATE_TABLES_SQL = [
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (verkefni_id) REFERENCES verkefni(id)
   )`,
+  `CREATE TABLE IF NOT EXISTS sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    verkefni_id INTEGER NOT NULL,
+    dags TEXT,
+    timi TEXT,
+    lengd INTEGER DEFAULT 60,
+    lesari TEXT,
+    athugasemd TEXT,
+    emails TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (verkefni_id) REFERENCES verkefni(id)
+  )`,
+  `CREATE TABLE IF NOT EXISTS kunnar (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nafn TEXT NOT NULL,
+    netfang TEXT,
+    simi TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )`,
 ];
 
 // Run migrations for existing databases
@@ -124,6 +143,17 @@ async function runMigrations(execute) {
       // Assign remaining projects to user 1 (joi)
       await execute("UPDATE verkefni SET user_id = 1 WHERE user_id IS NULL");
       console.log("Migration complete: user_id column added");
+    }
+
+    // Add kunni fields to verkefni
+    const hasKunni = columns.some(col => col.name === 'kunni');
+    if (!hasKunni) {
+      console.log("Migration: Adding kunni fields to verkefni...");
+      await execute("ALTER TABLE verkefni ADD COLUMN kunni TEXT");
+      await execute("ALTER TABLE verkefni ADD COLUMN kunni_tengill TEXT");
+      await execute("ALTER TABLE verkefni ADD COLUMN kunni_simi TEXT");
+      await execute("ALTER TABLE verkefni ADD COLUMN kunni_netfang TEXT");
+      console.log("Migration complete: kunni fields added");
     }
   } catch (err) {
     console.log("Migration error (may be expected on fresh DB):", err.message);

@@ -79,8 +79,9 @@ router.post('/', async (req, res) => {
         stofa, tengill_nafn, tengill_simi, tengill_netfang, art_director, art_director_simi,
         copywriter, copywriter_simi, lesari, handrit, google_doc_url, google_doc_id,
         tonlist_titill, tonlist_heimild, tonlist_url, tonlist_kostnadur,
-        stada, athugasemdir, payday_tengill, dropbox_slod, mottekid, skilad)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        stada, athugasemdir, payday_tengill, dropbox_slod, mottekid, skilad,
+        kunni, kunni_tengill, kunni_simi, kunni_netfang)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `,
       [
         userId,
@@ -113,6 +114,10 @@ router.post('/', async (req, res) => {
         b.dropbox_slod || '',
         b.mottekid || '',
         b.skilad || '',
+        b.kunni || '',
+        b.kunni_tengill || '',
+        b.kunni_simi || '',
+        b.kunni_netfang || '',
       ]
     );
     res.json({ id: result.lastInsertRowid, message: 'Verkefni búið til' });
@@ -165,7 +170,8 @@ router.put('/:id', async (req, res) => {
         stofa=?, tengill_nafn=?, tengill_simi=?, tengill_netfang=?, art_director=?, art_director_simi=?,
         copywriter=?, copywriter_simi=?, lesari=?, handrit=?, google_doc_url=?, google_doc_id=?,
         tonlist_titill=?, tonlist_heimild=?, tonlist_url=?, tonlist_kostnadur=?,
-        stada=?, athugasemdir=?, payday_tengill=?, dropbox_slod=?, mottekid=?, skilad=?, updated_at=CURRENT_TIMESTAMP
+        stada=?, athugasemdir=?, payday_tengill=?, dropbox_slod=?, mottekid=?, skilad=?,
+        kunni=?, kunni_tengill=?, kunni_simi=?, kunni_netfang=?, updated_at=CURRENT_TIMESTAMP
       WHERE id=?
     `,
       [
@@ -197,6 +203,10 @@ router.put('/:id', async (req, res) => {
         b.dropbox_slod || '',
         b.mottekid || '',
         b.skilad || '',
+        b.kunni || '',
+        b.kunni_tengill || '',
+        b.kunni_simi || '',
+        b.kunni_netfang || '',
         req.params.id,
       ]
     );
@@ -223,6 +233,7 @@ router.delete('/:id', async (req, res) => {
 
     await dbRun('DELETE FROM timaskraning WHERE verkefni_id = ?', [req.params.id]);
     await dbRun('DELETE FROM adkeypt WHERE verkefni_id = ?', [req.params.id]);
+    await dbRun('DELETE FROM sessions WHERE verkefni_id = ?', [req.params.id]);
     await dbRun('DELETE FROM verkefni WHERE id = ?', [req.params.id]);
     res.json({ message: 'Verkefni eytt' });
   } catch (err) {
