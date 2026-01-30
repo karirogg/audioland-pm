@@ -24,7 +24,7 @@ function setupAuthProtection(app, config) {
     // Allow static assets (images, css, js, fonts)
     if (req.path.match(/\.(png|jpg|jpeg|gif|svg|ico|css|js|woff|woff2|ttf|eot)$/i)) return next();
     // Allow booth (might be on TV without login)
-    if (req.path === '/booth.html' || req.path.startsWith('/api/booth')) return next();
+    if (req.path === '/booth.html' || req.path === '/boothLG.html' || req.path.startsWith('/api/booth')) return next();
     // Require auth for everything else
     return requireAuth(req, res, next);
   });
