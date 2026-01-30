@@ -523,6 +523,7 @@ async function sendaTilBooth(event, verkefniId) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          verkefniId: v.id,
           nafn: v.nafn,
           handrit: v.handrit,
           lesari: v.lesari,
@@ -535,6 +536,7 @@ async function sendaTilBooth(event, verkefniId) {
         ws.send(
           JSON.stringify({
             type: 'handrit',
+            verkefniId: v.id,
             nafn: v.nafn,
             handrit: v.handrit,
             lesari: v.lesari,
@@ -572,6 +574,7 @@ async function sendaIBooth(showAlert = false) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          verkefniId: currentVerkefniId,
           nafn,
           handrit,
           lesari,
@@ -589,6 +592,7 @@ async function sendaIBooth(showAlert = false) {
       ws.send(
         JSON.stringify({
           type: 'handrit',
+          verkefniId: currentVerkefniId,
           nafn,
           handrit,
           lesari,
@@ -1063,10 +1067,40 @@ async function loadContactDatalist(tegund, datalistId) {
   }
 }
 
+let boothUpdateTimeout = null;
+
 function syncHandritToHidden() {
   const editor = document.getElementById('handritEditor');
   document.getElementById('handrit').value = editor.innerHTML;
   triggerAutosave();
+
+  // Also update booth in real-time (debounced)
+  if (boothUpdateTimeout) clearTimeout(boothUpdateTimeout);
+  boothUpdateTimeout = setTimeout(updateBoothHandrit, 300);
+}
+
+// Send handrit update to booth (for live editing)
+async function updateBoothHandrit() {
+  if (!currentVerkefniId) return;
+
+  const handrit = document.getElementById('handrit').value;
+  const nafn = document.getElementById('nafn').value;
+  const lesari = document.getElementById('lesari').value;
+
+  try {
+    await fetch('/api/booth/update-handrit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        verkefniId: currentVerkefniId,
+        handrit,
+        nafn,
+        lesari,
+      }),
+    });
+  } catch (err) {
+    // Ignore errors - this is best effort
+  }
 }
 
 function syncHiddenToEditor() {

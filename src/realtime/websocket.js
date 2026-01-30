@@ -25,7 +25,11 @@ function setupWebSocket(server) {
         try {
           const data = JSON.parse(msg);
           if (data.type === 'handrit') {
-            updateBoothState(data);
+            // Store verkefniId in state for live updates
+            updateBoothState({
+              ...data,
+              verkefniId: data.verkefniId || null,
+            });
             const boothClients = getBoothClients();
             boothClients.forEach((c) => {
               if (c.readyState === 1) c.send(JSON.stringify(data));

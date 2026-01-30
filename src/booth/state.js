@@ -1,6 +1,7 @@
 // booth/state.js - Booth state management
 
 let currentBoothState = {
+  verkefniId: null,
   handrit: '',
   nafn: '',
   lesari: '',
@@ -21,6 +22,7 @@ function updateBoothState(data) {
 
 function resetBoothState() {
   currentBoothState = {
+    verkefniId: null,
     handrit: '',
     nafn: '',
     lesari: '',

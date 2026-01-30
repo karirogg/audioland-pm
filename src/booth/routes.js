@@ -20,10 +20,11 @@ router.get('/state', (req, res) => {
 
 // Send to booth
 router.post('/send', async (req, res) => {
-  const { nafn, handrit, lesari, take, googleDocId } = req.body;
+  const { verkefniId, nafn, handrit, lesari, take, googleDocId } = req.body;
   try {
     await broadcastToBooth({
       type: 'handrit',
+      verkefniId,
       nafn,
       handrit,
       lesari,
@@ -34,6 +35,32 @@ router.post('/send', async (req, res) => {
   } catch (err) {
     console.error('Booth send error:', err);
     res.status(500).json({ error: 'Failed to send to booth' });
+  }
+});
+
+// Update handrit in booth (for live editing)
+router.post('/update-handrit', async (req, res) => {
+  const { verkefniId, handrit, nafn, lesari } = req.body;
+  const currentState = getBoothState();
+
+  // Only update if this is the same project currently in booth
+  if (currentState.verkefniId && currentState.verkefniId === verkefniId) {
+    try {
+      await broadcastToBooth({
+        type: 'handrit',
+        verkefniId,
+        nafn: nafn || currentState.nafn,
+        handrit,
+        lesari: lesari || currentState.lesari,
+        take: currentState.take,
+      });
+      res.json({ message: 'Booth updated' });
+    } catch (err) {
+      console.error('Booth update error:', err);
+      res.status(500).json({ error: 'Failed to update booth' });
+    }
+  } else {
+    res.json({ message: 'Not the active project in booth', skipped: true });
   }
 });
 
