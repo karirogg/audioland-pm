@@ -122,8 +122,38 @@ const CREATE_TABLES_SQL = [
     nafn TEXT NOT NULL,
     simi TEXT,
     netfang TEXT,
+    workspace_id INTEGER,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(tegund, nafn)
+    UNIQUE(tegund, nafn, workspace_id)
+  )`,
+  // Multi-tenant tables
+  `CREATE TABLE IF NOT EXISTS workspaces (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nafn TEXT NOT NULL,
+    slug TEXT UNIQUE,
+    owner_id INTEGER,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE TABLE IF NOT EXISTS workspace_members (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    workspace_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    role TEXT DEFAULT 'member',
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(workspace_id, user_id),
+    FOREIGN KEY (workspace_id) REFERENCES workspaces(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  )`,
+  `CREATE TABLE IF NOT EXISTS invites (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    workspace_id INTEGER NOT NULL,
+    email TEXT,
+    role TEXT DEFAULT 'member',
+    token TEXT UNIQUE,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    expires_at TEXT,
+    used_at TEXT,
+    FOREIGN KEY (workspace_id) REFERENCES workspaces(id)
   )`,
 ];
 
@@ -171,6 +201,25 @@ async function runMigrations(execute) {
       console.log("Migration: Adding verkefnanumer column to verkefni...");
       await execute("ALTER TABLE verkefni ADD COLUMN verkefnanumer TEXT");
       console.log("Migration complete: verkefnanumer column added");
+    }
+
+    // Add workspace_id to verkefni
+    const hasWorkspaceId = columns.some(col => col.name === 'workspace_id');
+    if (!hasWorkspaceId) {
+      console.log("Migration: Adding workspace_id column to verkefni...");
+      await execute("ALTER TABLE verkefni ADD COLUMN workspace_id INTEGER");
+
+      // Create default workspace "Audioland" if none exists
+      await execute(`INSERT OR IGNORE INTO workspaces (id, nafn, slug, owner_id) VALUES (1, 'Audioland', 'audioland', 1)`);
+
+      // Assign all existing verkefni to default workspace
+      await execute("UPDATE verkefni SET workspace_id = 1 WHERE workspace_id IS NULL");
+
+      // Add existing users to default workspace
+      await execute(`INSERT OR IGNORE INTO workspace_members (workspace_id, user_id, role)
+        SELECT 1, id, 'admin' FROM users`);
+
+      console.log("Migration complete: workspace_id added, default workspace created");
     }
   } catch (err) {
     console.log("Migration error (may be expected on fresh DB):", err.message);

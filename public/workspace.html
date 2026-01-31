@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="is">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Velja Workspace - Bessi</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/common.css">
+  <style>
+    .workspace-container {
+      max-width: 500px;
+      margin: 100px auto;
+      padding: 2rem;
+    }
+    .workspace-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .workspace-header img {
+      height: 60px;
+      margin-bottom: 1rem;
+    }
+    .workspace-header h1 {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .workspace-header p {
+      color: var(--text-dim);
+    }
+    .workspace-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-bottom: 2rem;
+    }
+    .workspace-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 1.25rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .workspace-item:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--accent);
+    }
+    .workspace-item-info h3 {
+      font-size: 1rem;
+      margin-bottom: 0.25rem;
+    }
+    .workspace-item-info span {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+    }
+    .workspace-item-arrow {
+      color: var(--text-dim);
+      font-size: 1.2rem;
+    }
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin: 2rem 0;
+      color: var(--text-dim);
+      font-size: 0.85rem;
+    }
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+    .create-form {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+    .create-form h3 {
+      margin-bottom: 1rem;
+    }
+    .create-form input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--input-bg);
+      color: var(--text);
+      font-size: 1rem;
+      margin-bottom: 1rem;
+    }
+    .create-form input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    .create-form button {
+      width: 100%;
+    }
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 2rem;
+      padding: 1rem;
+      background: var(--bg-card);
+      border-radius: 12px;
+    }
+    .user-info img {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+    }
+    .user-info-text {
+      flex: 1;
+    }
+    .user-info-text strong {
+      display: block;
+    }
+    .user-info-text span {
+      font-size: 0.85rem;
+      color: var(--text-dim);
+    }
+    .logout-link {
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.85rem;
+    }
+    .logout-link:hover {
+      color: var(--danger);
+    }
+    .empty-state {
+      text-align: center;
+      padding: 2rem;
+      color: var(--text-dim);
+    }
+  </style>
+</head>
+<body>
+  <div class="workspace-container">
+    <div class="workspace-header">
+      <img src="AppLogo.png" alt="Bessi">
+      <h1>Veldu Workspace</h1>
+      <p>Veldu workspace til að halda áfram</p>
+    </div>
+
+    <div id="userInfo" class="user-info" style="display:none;">
+      <img id="userAvatar" src="" alt="">
+      <div class="user-info-text">
+        <strong id="userName"></strong>
+        <span id="userEmail"></span>
+      </div>
+      <a href="/auth/logout" class="logout-link">Útskrá</a>
+    </div>
+
+    <div id="workspaceList" class="workspace-list">
+      <div class="empty-state">Hleð...</div>
+    </div>
+
+    <div class="divider">eða</div>
+
+    <div class="create-form">
+      <h3>Búa til nýtt workspace</h3>
+      <input type="text" id="newWorkspaceName" placeholder="Nafn á workspace (t.d. Mitt Hljóðver)">
+      <button class="btn btn-primary" onclick="createWorkspace()">Búa til</button>
+    </div>
+  </div>
+
+  <script>
+    let currentUser = null;
+
+    async function init() {
+      try {
+        const res = await fetch('/auth/user');
+        const data = await res.json();
+
+        if (!data.user) {
+          window.location.href = '/login.html';
+          return;
+        }
+
+        currentUser = data.user;
+        document.getElementById('userName').textContent = data.user.name || data.user.email;
+        document.getElementById('userEmail').textContent = data.user.email;
+        if (data.user.mynd) {
+          document.getElementById('userAvatar').src = data.user.mynd;
+        }
+        document.getElementById('userInfo').style.display = 'flex';
+
+        renderWorkspaces(data.workspaces || []);
+      } catch (err) {
+        console.error('Init error:', err);
+      }
+    }
+
+    function renderWorkspaces(workspaces) {
+      const container = document.getElementById('workspaceList');
+
+      if (workspaces.length === 0) {
+        container.innerHTML = '<div class="empty-state">Þú ert ekki í neinu workspace ennþá.<br>Búðu til nýtt eða biddu um boð.</div>';
+        return;
+      }
+
+      container.innerHTML = workspaces.map(w => `
+        <div class="workspace-item" onclick="selectWorkspace(${w.id})">
+          <div class="workspace-item-info">
+            <h3>${escapeHtml(w.nafn)}</h3>
+            <span>${w.role === 'owner' ? 'Eigandi' : w.role === 'admin' ? 'Stjórnandi' : 'Meðlimur'}</span>
+          </div>
+          <div class="workspace-item-arrow">→</div>
+        </div>
+      `).join('');
+    }
+
+    async function selectWorkspace(id) {
+      try {
+        const res = await fetch('/auth/workspace/' + id, { method: 'POST' });
+        if (res.ok) {
+          window.location.href = '/';
+        } else {
+          const data = await res.json();
+          alert(data.error || 'Villa');
+        }
+      } catch (err) {
+        console.error('Select error:', err);
+        alert('Villa við að velja workspace');
+      }
+    }
+
+    async function createWorkspace() {
+      const nafn = document.getElementById('newWorkspaceName').value.trim();
+      if (!nafn) {
+        alert('Sláðu inn nafn');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/workspaces', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nafn })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          await selectWorkspace(data.id);
+        } else {
+          const data = await res.json();
+          alert(data.error || 'Villa');
+        }
+      } catch (err) {
+        console.error('Create error:', err);
+        alert('Villa við að búa til workspace');
+      }
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Handle Enter key in input
+    document.getElementById('newWorkspaceName').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') createWorkspace();
+    });
+
+    init();
+  </script>
+</body>
+</html>

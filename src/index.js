@@ -31,6 +31,7 @@ const kunnarRoutes = require('./routes/kunnar');
 const sessionsRoutes = require('./routes/sessions');
 const tengiliðirRoutes = require('./routes/tengilidir');
 const exportRoutes = require('./routes/export');
+const workspacesRoutes = require('./routes/workspaces');
 
 // Database
 const { initDatabase, isUsingTurso } = require('../database');
@@ -73,6 +74,7 @@ app.use('/api/kunnar', kunnarRoutes);
 app.use('/api', sessionsRoutes);
 app.use('/api/tengilidir', tengiliðirRoutes);
 app.use('/api', exportRoutes);
+app.use('/api/workspaces', workspacesRoutes);
 
 // Setup WebSocket for development
 if (!config.isProduction) {

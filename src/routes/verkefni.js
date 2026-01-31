@@ -4,32 +4,26 @@ const express = require('express');
 const router = express.Router();
 const { dbAll, dbGet, dbRun } = require('../database/helpers');
 
-// Get all projects
+// Get all projects (filtered by workspace)
 router.get('/', async (req, res) => {
   try {
-    const userId = req.user?.id || null;
-    const isAdmin = req.user?.is_admin === 1;
+    const workspaceId = req.session?.currentWorkspaceId;
 
-    let verkefni;
-    if (isAdmin) {
-      // Admin sees all projects
-      verkefni = await dbAll(`
-        SELECT v.*, u.nafn as owner_name,
-          COALESCE((SELECT SUM(timi_minutur) FROM timaskraning WHERE verkefni_id = v.id AND tegund = 'timi'), 0) as total_minutes
-        FROM verkefni v
-        LEFT JOIN users u ON v.user_id = u.id
-        ORDER BY v.created_at DESC
-      `);
-    } else {
-      // Regular user sees only their projects
-      verkefni = await dbAll(`
-        SELECT v.*,
-          COALESCE((SELECT SUM(timi_minutur) FROM timaskraning WHERE verkefni_id = v.id AND tegund = 'timi'), 0) as total_minutes
-        FROM verkefni v
-        WHERE v.user_id = ? OR v.user_id IS NULL
-        ORDER BY v.created_at DESC
-      `, [userId]);
+    if (!workspaceId) {
+      // No workspace selected - return empty
+      return res.json([]);
     }
+
+    // Get projects for current workspace
+    const verkefni = await dbAll(`
+      SELECT v.*, u.nafn as owner_name,
+        COALESCE((SELECT SUM(timi_minutur) FROM timaskraning WHERE verkefni_id = v.id AND tegund = 'timi'), 0) as total_minutes
+      FROM verkefni v
+      LEFT JOIN users u ON v.user_id = u.id
+      WHERE v.workspace_id = ?
+      ORDER BY v.created_at DESC
+    `, [workspaceId]);
+
     res.json(verkefni);
   } catch (err) {
     console.error('Verkefni GET error:', err);
@@ -51,6 +45,11 @@ router.get('/:id', async (req, res) => {
 // Create project
 router.post('/', async (req, res) => {
   try {
+    const workspaceId = req.session?.currentWorkspaceId;
+    if (!workspaceId) {
+      return res.status(400).json({ error: 'Ekkert workspace valið' });
+    }
+
     const b = req.body;
     let google_doc_id = '';
     if (b.google_doc_url) {
@@ -58,12 +57,12 @@ router.post('/', async (req, res) => {
       if (match) google_doc_id = match[1];
     }
 
-    // Generate verkefnanumer: YYMM-NNN
+    // Generate verkefnanumer: YYMM-NNN (per workspace)
     const now = new Date();
     const prefix = now.toISOString().slice(2, 4) + now.toISOString().slice(5, 7);
     const existing = await dbAll(
-      'SELECT verkefnanumer FROM verkefni WHERE verkefnanumer LIKE ? ORDER BY verkefnanumer DESC LIMIT 1',
-      [prefix + '-%']
+      'SELECT verkefnanumer FROM verkefni WHERE workspace_id = ? AND verkefnanumer LIKE ? ORDER BY verkefnanumer DESC LIMIT 1',
+      [workspaceId, prefix + '-%']
     );
     let seq = 1;
     if (existing.length > 0 && existing[0].verkefnanumer) {
@@ -76,15 +75,16 @@ router.post('/', async (req, res) => {
 
     const result = await dbRun(
       `
-      INSERT INTO verkefni (user_id, verkefnanumer, nafn, mynd, framleidsla, produser, produser_simi, produser_netfang,
+      INSERT INTO verkefni (workspace_id, user_id, verkefnanumer, nafn, mynd, framleidsla, produser, produser_simi, produser_netfang,
         stofa, tengill_nafn, tengill_simi, tengill_netfang, art_director, art_director_simi,
         copywriter, copywriter_simi, lesari, lesari_simi, lesari_netfang, handrit, google_doc_url, google_doc_id,
         tonlist_titill, tonlist_heimild, tonlist_url, tonlist_kostnadur,
         stada, athugasemdir, payday_tengill, dropbox_slod, mottekid, skilad,
         kunni, kunni_tengill, kunni_simi, kunni_netfang)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `,
       [
+        workspaceId,
         userId,
         verkefnanumer,
         b.nafn || '',
@@ -149,15 +149,14 @@ router.post('/:id/mynd', express.json({ limit: '10mb' }), async (req, res) => {
 // Update project
 router.put('/:id', async (req, res) => {
   try {
-    const userId = req.user?.id;
-    const isAdmin = req.user?.is_admin === 1;
+    const workspaceId = req.session?.currentWorkspaceId;
 
-    // Check ownership
-    const verkefni = await dbGet('SELECT user_id FROM verkefni WHERE id = ?', [req.params.id]);
+    // Check workspace access
+    const verkefni = await dbGet('SELECT workspace_id FROM verkefni WHERE id = ?', [req.params.id]);
     if (!verkefni) {
       return res.status(404).json({ error: 'Verkefni fannst ekki' });
     }
-    if (!isAdmin && verkefni.user_id && verkefni.user_id !== userId) {
+    if (verkefni.workspace_id !== workspaceId) {
       return res.status(403).json({ error: 'Þú hefur ekki aðgang að þessu verkefni' });
     }
 
@@ -225,15 +224,14 @@ router.put('/:id', async (req, res) => {
 // Delete project
 router.delete('/:id', async (req, res) => {
   try {
-    const userId = req.user?.id;
-    const isAdmin = req.user?.is_admin === 1;
+    const workspaceId = req.session?.currentWorkspaceId;
 
-    // Check ownership
-    const verkefni = await dbGet('SELECT user_id FROM verkefni WHERE id = ?', [req.params.id]);
+    // Check workspace access
+    const verkefni = await dbGet('SELECT workspace_id FROM verkefni WHERE id = ?', [req.params.id]);
     if (!verkefni) {
       return res.status(404).json({ error: 'Verkefni fannst ekki' });
     }
-    if (!isAdmin && verkefni.user_id && verkefni.user_id !== userId) {
+    if (verkefni.workspace_id !== workspaceId) {
       return res.status(403).json({ error: 'Þú hefur ekki aðgang að þessu verkefni' });
     }
 

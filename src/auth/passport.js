@@ -22,13 +22,16 @@ function setupPassport(app) {
           return done(null, false, { message: 'Ekkert email fannst' });
         }
 
-        // Check if email is in allowed list (if list exists)
-        if (config.allowedEmails.length > 0) {
+        // Check if email is in allowed list (if list exists and not empty)
+        // If ALLOWED_EMAILS is set, it acts as a whitelist
+        // If not set or empty, anyone can sign up (multi-tenant mode)
+        if (config.allowedEmails && config.allowedEmails.length > 0) {
           if (!config.allowedEmails.includes(email.toLowerCase())) {
             console.log('Access denied for:', email);
             return done(null, false, { message: 'Þú hefur ekki aðgang að þessu kerfi' });
           }
         }
+        console.log('Login:', email);
 
         try {
           // Check if user exists
