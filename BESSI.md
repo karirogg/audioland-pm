@@ -234,22 +234,15 @@ npm start
 
 ### Free Trial
 - **90 dagar frítt** fyrir öll ný workspaces
-- Allar Pro features meðfylgjandi
+- Allar features meðfylgjandi
 
-### Pro ($29/mánuð)
+### Pro ($200/ári)
 - Unlimited verkefni
-- 10 notendur
-- Custom branding (kemur)
-- Priority support
-- Analytics (kemur)
-
-### Enterprise ($99/mánuð)
-- Allt í Pro +
 - Unlimited notendur
-- SSO/SAML (kemur)
-- API access (kemur)
-- Custom domain (kemur)
-- Webhooks (kemur)
+- Booth real-time
+- Google Docs integration
+- PDF/CSV export
+- Priority support
 
 ## Workspace Settings
 
