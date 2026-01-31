@@ -229,3 +229,35 @@ npm start
 | Admin | Full | Full | Yes | Limited |
 | Member | Full | Full | No | No |
 | Guest | View | View | No | No |
+
+## Pricing
+
+### Free Trial
+- **90 dagar frítt** fyrir öll ný workspaces
+- Allar Pro features meðfylgjandi
+
+### Pro ($29/mánuð)
+- Unlimited verkefni
+- 10 notendur
+- Custom branding (kemur)
+- Priority support
+- Analytics (kemur)
+
+### Enterprise ($99/mánuð)
+- Allt í Pro +
+- Unlimited notendur
+- SSO/SAML (kemur)
+- API access (kemur)
+- Custom domain (kemur)
+- Webhooks (kemur)
+
+## Workspace Settings
+
+Owners og Admins geta:
+- Breytt nafni workspace
+- Séð og stjórnað meðlimum
+- Búið til invite links
+- Fjarlægt meðlimi
+- Breytt hlutverkum
+
+Settings síða: `/settings.html`

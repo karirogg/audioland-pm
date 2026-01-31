@@ -876,6 +876,9 @@ function downloadPDF() {
   window.open('/api/verkefni/' + currentVerkefniId + '/pdf', '_blank');
 }
 
+let currentWorkspace = null;
+let userWorkspaces = [];
+
 async function fetchUser() {
   try {
     const res = await fetch('/auth/user', { credentials: 'include' });
@@ -884,9 +887,81 @@ async function fetchUser() {
       document.getElementById('userName').textContent = data.user.name || data.user.email;
       document.getElementById('userInfo').style.display = 'flex';
       document.getElementById('logoutBtn').style.display = 'flex';
+
+      // Handle workspaces
+      userWorkspaces = data.workspaces || [];
+      currentWorkspace = data.currentWorkspace;
+
+      if (currentWorkspace) {
+        document.getElementById('workspaceName').textContent = currentWorkspace.nafn;
+        document.getElementById('workspaceSelector').style.display = 'flex';
+
+        // Show settings button for owners/admins
+        if (['owner', 'admin'].includes(currentWorkspace.role)) {
+          document.getElementById('settingsBtn').style.display = 'flex';
+        }
+
+        // Show trial badge
+        if (currentWorkspace.plan === 'trial' && currentWorkspace.trial_ends_at) {
+          const trialEnd = new Date(currentWorkspace.trial_ends_at);
+          const now = new Date();
+          const daysLeft = Math.max(0, Math.ceil((trialEnd - now) / (1000 * 60 * 60 * 24)));
+          if (daysLeft > 0) {
+            document.getElementById('trialBadge').textContent = daysLeft + ' dagar eftir';
+            document.getElementById('trialBadge').style.display = 'inline-block';
+          }
+        }
+
+        // Render workspace list
+        renderWorkspaceMenu();
+      } else if (userWorkspaces.length === 0) {
+        // No workspace - redirect to create one
+        window.location.href = '/workspace.html';
+      }
     }
   } catch (err) {
-    console.error('Villa vi\u00f0 a\u00f0 s\u00e6kja notanda:', err);
+    console.error('Villa við að sækja notanda:', err);
+  }
+}
+
+function renderWorkspaceMenu() {
+  const container = document.getElementById('workspaceList');
+  container.innerHTML = userWorkspaces.map(w => `
+    <div class="workspace-menu-item ${w.id === currentWorkspace?.id ? 'active' : ''}"
+         onclick="switchWorkspace(${w.id})">
+      ${escapeHtml(w.nafn)}
+    </div>
+  `).join('');
+}
+
+function toggleWorkspaceMenu() {
+  document.getElementById('workspaceMenu').classList.toggle('active');
+}
+
+async function switchWorkspace(id) {
+  try {
+    const res = await fetch('/auth/workspace/' + id, { method: 'POST' });
+    if (res.ok) {
+      window.location.reload();
+    }
+  } catch (err) {
+    console.error('Villa við að skipta um workspace:', err);
+  }
+}
+
+// Close workspace menu when clicking outside
+document.addEventListener('click', (e) => {
+  const selector = document.getElementById('workspaceSelector');
+  const menu = document.getElementById('workspaceMenu');
+  if (selector && menu && !selector.contains(e.target)) {
+    menu.classList.remove('active');
+  }
+});
+
+function opnaSettings(e) {
+  e.preventDefault();
+  if (currentWorkspace) {
+    window.location.href = '/settings.html';
   }
 }
 

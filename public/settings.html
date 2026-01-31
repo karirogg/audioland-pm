@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="is">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stillingar - Bessi</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/common.css">
+  <style>
+    .settings-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    .settings-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .settings-header h1 {
+      font-size: 1.5rem;
+    }
+    .back-btn {
+      padding: 0.5rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      text-decoration: none;
+      color: var(--text);
+    }
+    .settings-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .settings-section h2 {
+      font-size: 1.1rem;
+      margin-bottom: 1rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 0;
+    }
+    .setting-row:not(:last-child) {
+      border-bottom: 1px solid var(--border);
+    }
+    .setting-label {
+      font-weight: 500;
+    }
+    .setting-desc {
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      margin-top: 0.25rem;
+    }
+    .setting-input {
+      padding: 0.5rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--input-bg);
+      color: var(--text);
+      font-size: 0.9rem;
+      min-width: 200px;
+    }
+    .member-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .member-item {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.75rem;
+      background: var(--bg-light);
+      border-radius: 8px;
+    }
+    .member-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--border);
+    }
+    .member-info {
+      flex: 1;
+    }
+    .member-name {
+      font-weight: 500;
+    }
+    .member-email {
+      font-size: 0.85rem;
+      color: var(--text-dim);
+    }
+    .member-role {
+      padding: 0.25rem 0.5rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 0.8rem;
+    }
+    .member-role.owner { background: var(--accent); color: #000; border-color: var(--accent); }
+    .member-role.admin { background: var(--blue); color: #fff; border-color: var(--blue); }
+    .invite-form {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+    }
+    .invite-form input {
+      flex: 1;
+    }
+    .plan-badge {
+      display: inline-block;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      font-weight: 600;
+    }
+    .plan-badge.trial {
+      background: var(--accent);
+      color: #000;
+    }
+    .plan-badge.pro {
+      background: var(--blue);
+      color: #fff;
+    }
+    .trial-info {
+      margin-top: 0.5rem;
+      font-size: 0.9rem;
+      color: var(--text-dim);
+    }
+    .upgrade-btn {
+      margin-top: 1rem;
+    }
+    .invite-link {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem;
+      background: var(--bg-light);
+      border-radius: 6px;
+      margin-top: 1rem;
+    }
+    .invite-link input {
+      flex: 1;
+      border: none;
+      background: transparent;
+      color: var(--text);
+      font-size: 0.85rem;
+    }
+    .invite-link-label {
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      margin-bottom: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <a href="/"><img src="logo.jpg" alt="Bessi"></a>
+    </div>
+    <div class="header-actions">
+      <a href="/" class="btn btn-secondary">← Til baka</a>
+    </div>
+  </header>
+
+  <div class="settings-container">
+    <div class="settings-header">
+      <h1>Stillingar</h1>
+    </div>
+
+    <!-- Workspace Info -->
+    <div class="settings-section">
+      <h2>Workspace</h2>
+      <div class="setting-row">
+        <div>
+          <div class="setting-label">Nafn</div>
+        </div>
+        <input type="text" id="workspaceName" class="setting-input" onchange="saveSettings()">
+      </div>
+    </div>
+
+    <!-- Plan & Billing -->
+    <div class="settings-section">
+      <h2>Áskrift</h2>
+      <div id="planInfo">
+        <span class="plan-badge trial" id="planBadge">Trial</span>
+        <div class="trial-info" id="trialInfo">90 dagar eftir af prufuáskrift</div>
+        <button class="btn btn-primary upgrade-btn" onclick="upgradePlan()">Uppfæra í Pro</button>
+      </div>
+    </div>
+
+    <!-- Members -->
+    <div class="settings-section">
+      <h2>Meðlimir</h2>
+      <div class="member-list" id="memberList">
+        <div style="color: var(--text-dim);">Hleð...</div>
+      </div>
+
+      <div class="invite-form">
+        <input type="email" id="inviteEmail" class="setting-input" placeholder="Netfang" style="min-width: 0;">
+        <select id="inviteRole" class="setting-input" style="min-width: 120px;">
+          <option value="member">Meðlimur</option>
+          <option value="admin">Stjórnandi</option>
+          <option value="guest">Gestur</option>
+        </select>
+        <button class="btn btn-primary" onclick="createInvite()">Bjóða</button>
+      </div>
+
+      <div id="inviteLinkSection" style="display:none;">
+        <div class="invite-link-label">Boðstengill (gildir í 7 daga):</div>
+        <div class="invite-link">
+          <input type="text" id="inviteLinkInput" readonly>
+          <button class="btn btn-small btn-secondary" onclick="copyInviteLink()">Afrita</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let workspace = null;
+    let members = [];
+
+    async function init() {
+      try {
+        // Get current user and workspace
+        const userRes = await fetch('/auth/user');
+        const userData = await userRes.json();
+
+        if (!userData.user || !userData.currentWorkspace) {
+          window.location.href = '/';
+          return;
+        }
+
+        workspace = userData.currentWorkspace;
+
+        // Get workspace settings
+        const settingsRes = await fetch('/api/workspaces/' + workspace.id + '/settings');
+        const settings = await settingsRes.json();
+
+        document.getElementById('workspaceName').value = settings.nafn || '';
+
+        // Plan info
+        if (settings.plan === 'trial') {
+          document.getElementById('planBadge').textContent = 'Trial';
+          document.getElementById('planBadge').className = 'plan-badge trial';
+          document.getElementById('trialInfo').textContent = settings.trialDaysLeft + ' dagar eftir af prufuáskrift';
+        } else if (settings.plan === 'pro') {
+          document.getElementById('planBadge').textContent = 'Pro';
+          document.getElementById('planBadge').className = 'plan-badge pro';
+          document.getElementById('trialInfo').style.display = 'none';
+          document.querySelector('.upgrade-btn').style.display = 'none';
+        }
+
+        // Load members
+        await loadMembers();
+      } catch (err) {
+        console.error('Init error:', err);
+      }
+    }
+
+    async function loadMembers() {
+      try {
+        const res = await fetch('/api/workspaces/' + workspace.id + '/members');
+        members = await res.json();
+        renderMembers();
+      } catch (err) {
+        console.error('Error loading members:', err);
+      }
+    }
+
+    function renderMembers() {
+      const container = document.getElementById('memberList');
+      container.innerHTML = members.map(m => `
+        <div class="member-item">
+          <img src="${m.mynd || 'AppLogo.png'}" class="member-avatar" onerror="this.src='AppLogo.png'">
+          <div class="member-info">
+            <div class="member-name">${escapeHtml(m.nafn || 'Nafnlaus')}</div>
+            <div class="member-email">${escapeHtml(m.email)}</div>
+          </div>
+          <span class="member-role ${m.role}">${getRoleName(m.role)}</span>
+          ${m.role !== 'owner' && workspace.role === 'owner' ? `
+            <button class="btn btn-small btn-ghost" onclick="removeMember(${m.id})" title="Fjarlægja">×</button>
+          ` : ''}
+        </div>
+      `).join('');
+    }
+
+    function getRoleName(role) {
+      const names = { owner: 'Eigandi', admin: 'Stjórnandi', member: 'Meðlimur', guest: 'Gestur' };
+      return names[role] || role;
+    }
+
+    async function saveSettings() {
+      const nafn = document.getElementById('workspaceName').value;
+      try {
+        await fetch('/api/workspaces/' + workspace.id + '/settings', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nafn })
+        });
+      } catch (err) {
+        console.error('Error saving settings:', err);
+      }
+    }
+
+    async function createInvite() {
+      const email = document.getElementById('inviteEmail').value;
+      const role = document.getElementById('inviteRole').value;
+
+      if (!email) {
+        alert('Sláðu inn netfang');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/workspaces/' + workspace.id + '/invite', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, role })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          const fullUrl = window.location.origin + data.inviteUrl;
+          document.getElementById('inviteLinkInput').value = fullUrl;
+          document.getElementById('inviteLinkSection').style.display = 'block';
+          document.getElementById('inviteEmail').value = '';
+        } else {
+          alert(data.error || 'Villa við að búa til boð');
+        }
+      } catch (err) {
+        console.error('Error creating invite:', err);
+        alert('Villa við að búa til boð');
+      }
+    }
+
+    function copyInviteLink() {
+      const input = document.getElementById('inviteLinkInput');
+      input.select();
+      document.execCommand('copy');
+      alert('Tengill afritaður!');
+    }
+
+    async function removeMember(userId) {
+      if (!confirm('Ertu viss um að þú viljir fjarlægja þennan meðlim?')) return;
+
+      try {
+        const res = await fetch('/api/workspaces/' + workspace.id + '/members/' + userId, {
+          method: 'DELETE'
+        });
+
+        if (res.ok) {
+          await loadMembers();
+        } else {
+          const data = await res.json();
+          alert(data.error || 'Villa');
+        }
+      } catch (err) {
+        console.error('Error removing member:', err);
+      }
+    }
+
+    function upgradePlan() {
+      alert('Stripe billing kemur bráðlega!');
+      // TODO: Redirect to Stripe checkout
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text || '';
+      return div.innerHTML;
+    }
+
+    init();
+  </script>
+</body>
+</html>

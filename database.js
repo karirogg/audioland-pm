@@ -132,6 +132,10 @@ const CREATE_TABLES_SQL = [
     nafn TEXT NOT NULL,
     slug TEXT UNIQUE,
     owner_id INTEGER,
+    plan TEXT DEFAULT 'trial',
+    trial_ends_at TEXT,
+    stripe_customer_id TEXT,
+    stripe_subscription_id TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
   )`,
   `CREATE TABLE IF NOT EXISTS workspace_members (

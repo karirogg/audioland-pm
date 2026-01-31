@@ -58,8 +58,8 @@ function setupAuthProtection(app, config) {
   app.use((req, res, next) => {
     // Allow auth routes
     if (req.path.startsWith('/auth/')) return next();
-    // Allow login page and workspace selection
-    if (req.path === '/login.html' || req.path === '/workspace.html') return next();
+    // Allow login page, workspace selection, and settings
+    if (req.path === '/login.html' || req.path === '/workspace.html' || req.path === '/settings.html') return next();
     // Allow invite pages
     if (req.path.startsWith('/invite/')) return next();
     // Allow static assets (images, css, js, fonts)

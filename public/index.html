@@ -15,7 +15,23 @@
   </head>
   <body>
     <header>
-      <div class="logo"><img src="logo.jpg" alt="Bessi" /></div>
+      <div class="logo">
+        <a href="/"><img src="logo.jpg" alt="Bessi" /></a>
+        <div class="workspace-selector" id="workspaceSelector" style="display:none;">
+          <button class="workspace-btn" onclick="toggleWorkspaceMenu()">
+            <span id="workspaceName">Workspace</span>
+            <span class="workspace-arrow">▼</span>
+          </button>
+          <div class="workspace-menu" id="workspaceMenu">
+            <div class="workspace-menu-header">Workspaces</div>
+            <div id="workspaceList"></div>
+            <div class="workspace-menu-footer">
+              <a href="/workspace.html" class="btn btn-small btn-ghost">+ Nýtt workspace</a>
+            </div>
+          </div>
+        </div>
+        <span class="trial-badge" id="trialBadge" style="display:none;"></span>
+      </div>
       <div class="header-center">
         <div class="search-box">
           <input
@@ -26,6 +42,7 @@
         </div>
       </div>
       <div class="header-actions">
+        <a href="#" class="btn btn-ghost btn-small" id="settingsBtn" onclick="opnaSettings(event)" style="display:none;" title="Stillingar">⚙️</a>
         <span id="userInfo" class="user-info" style="display:none;">
           <span class="user-status">●</span>
           <span id="userName"></span>
