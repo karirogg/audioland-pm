@@ -86,7 +86,7 @@ router.post('/', async (req, res) => {
     });
   } catch (err) {
     console.error('Error creating workspace:', err);
-    res.status(500).json({ error: 'Villa við að búa til workspace' });
+    res.status(500).json({ error: 'Villa við að búa til workspace: ' + (err.message || String(err)) });
   }
 });
 

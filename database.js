@@ -225,6 +225,25 @@ async function runMigrations(execute) {
 
       console.log("Migration complete: workspace_id added, default workspace created");
     }
+
+    // Add plan and trial columns to workspaces
+    try {
+      const wsColumns = await execute("PRAGMA table_info(workspaces)");
+      const hasPlan = wsColumns.some(col => col.name === 'plan');
+      if (!hasPlan) {
+        console.log("Migration: Adding plan columns to workspaces...");
+        await execute("ALTER TABLE workspaces ADD COLUMN plan TEXT DEFAULT 'trial'");
+        await execute("ALTER TABLE workspaces ADD COLUMN trial_ends_at TEXT");
+        await execute("ALTER TABLE workspaces ADD COLUMN stripe_customer_id TEXT");
+        await execute("ALTER TABLE workspaces ADD COLUMN stripe_subscription_id TEXT");
+        // Set trial for existing workspaces
+        const trialEnd = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
+        await execute(`UPDATE workspaces SET plan = 'trial', trial_ends_at = '${trialEnd}' WHERE plan IS NULL`);
+        console.log("Migration complete: plan columns added");
+      }
+    } catch (planErr) {
+      console.log("Plan migration note:", planErr.message);
+    }
   } catch (err) {
     console.log("Migration error (may be expected on fresh DB):", err.message);
   }
